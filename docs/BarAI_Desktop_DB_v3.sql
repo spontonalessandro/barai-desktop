@@ -1,0 +1,12 @@
+-- BarAI Desktop v3
+-- Schema reale in src/db/schema.js
+-- Novità rispetto alla v2:
+-- - fatture_acquisto.data_pagamento
+-- - fatture_acquisto.origine_import
+-- - fatture_acquisto.xml_hash
+-- - fatture_acquisto.xml_nome_file
+-- - fatture_acquisto_righe.numero_linea
+-- - scadenze.data_pagamento
+-- - import_log
+--
+-- La migrazione automatica viene eseguita da src/db/baraiDb.js con ALTER TABLE se le colonne mancano.
