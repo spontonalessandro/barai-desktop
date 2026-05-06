@@ -125,7 +125,7 @@ function DetailList({ title, rows }) {
 
 // --- Main page ---
 
-export default function GestionePage({ data, liquidita = 0 }) {
+export default function GestionePage({ data, liquidita = 0, scadenzeAperte = 0 }) {
   const [tab, setTab] = useState('dashboard');
   const [selectedMonth, setSelectedMonth] = useState(monthISO());
 
@@ -198,11 +198,11 @@ export default function GestionePage({ data, liquidita = 0 }) {
               hint="ottimale: > 10%"
             />
             <SemaforoCard
-              label="Liquidità (Prima Nota)"
-              value={liquidita}
-              display={euro(liquidita)}
+              label="Posizione netta"
+              value={liquidita - scadenzeAperte}
+              display={euro(liquidita - scadenzeAperte)}
               soglia={{ verde: 5000, giallo: 0, maggiore: true }}
-              hint={liquidita >= 0 ? 'saldo positivo' : 'saldo negativo'}
+              hint={`Cassa ${euro(liquidita)} − Fatture aperte ${euro(scadenzeAperte)}`}
             />
           </div>
 
