@@ -685,7 +685,7 @@ export default function ControlloPrezzi({ data, onMap, onMapMany, onSaveProduct 
 
       <div className=”card table-card price-card”>
         <div className=”toolbar price-toolbar compact-toolbar”>
-          <span>{tab === 'mapping' ? `${filteredNonMappati.length} risultati` : tab === 'righe' ? `${filteredRighe.length} righe` : `${filteredProdotti.length} prodotti`}</span>
+          <span>{tab === 'mapping' ? filteredNonMappati.length + ' risultati' : tab === 'righe' ? filteredRighe.length + ' righe' : filteredProdotti.length + ' prodotti'}</span>
           {tab === 'mapping' && selected.size > 0 ? (
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               <span className=”muted-line”>{selected.size} selezionati</span>
