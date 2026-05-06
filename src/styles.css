@@ -1259,6 +1259,17 @@ table.compact-table .status-col { width: 104px; }
 }
 .bulk-nome-input { flex: 1; }
 .bulk-nome-input input { width: 100%; }
+.bulk-existing-badge {
+  align-self: flex-end;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: rgba(36,107,79,.12);
+  border: 1px solid rgba(36,107,79,.28);
+  color: var(--green);
+  font-size: 12px;
+  font-weight: 750;
+  white-space: nowrap;
+}
 .bulk-table-wrap {
   flex: 1;
   overflow-y: auto;

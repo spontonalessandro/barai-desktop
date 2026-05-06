@@ -308,14 +308,35 @@ function ProductDetail({ product, onClose }) {
   );
 }
 
-function BulkMappingModal({ selected, items, categorie, onMap, onClose }) {
+function BulkMappingModal({ selected, items, categorie, prodotti, onMap, onClose }) {
   const selectedItems = items.filter((p) => selected.has(p.key || p.descrizione_originale));
   const categoryOptions = buildCategoryOptions(categorie, '');
 
   const [bulkCategoria, setBulkCategoria] = useState('');
   const [nomeMode, setNomeMode] = useState('fattura');
   const [nomeUnificato, setNomeUnificato] = useState('');
+  const [prodottoEsistente, setProdottoEsistente] = useState(null);
+  const [productSearch, setProductSearch] = useState('');
   const [saving, setSaving] = useState(false);
+
+  const filteredProdottiEsistenti = useMemo(() => {
+    const q = norm(productSearch);
+    return (prodotti || [])
+      .filter((p) => !q || norm(p.nome + ' ' + (p.categoria || '') + ' ' + (p.um_base || '')).includes(q))
+      .slice(0, 80);
+  }, [prodotti, productSearch]);
+
+  function selectProdottoEsistente(id) {
+    const p = (prodotti || []).find((x) => x.id === id);
+    setProdottoEsistente(p || null);
+    if (p) {
+      setBulkCategoria(normalizeCategory(p.categoria || ''));
+      setNomeMode('unificato');
+      setNomeUnificato(p.nome || '');
+    } else {
+      setProdottoEsistente(null);
+    }
+  }
 
   const initRow = (item) => ({
     nome: item.descrizione_originale,
@@ -330,7 +351,6 @@ function BulkMappingModal({ selected, items, categorie, onMap, onClose }) {
     setRows((prev) => ({ ...prev, [key]: { ...prev[key], [field]: value } }));
   }
 
-  // Applica categoria/nomeMode a tutte le righe visivamente (solo lettura ai fini del payload)
   async function saveBulk() {
     if (!bulkCategoria) return;
     setSaving(true);
@@ -340,10 +360,10 @@ function BulkMappingModal({ selected, items, categorie, onMap, onClose }) {
       const nomeProdotto = nomeMode === 'unificato' && nomeUnificato.trim() ? nomeUnificato.trim() : item.descrizione_originale;
       return {
         ...item,
-        prodotto_id: '',
+        prodotto_id: prodottoEsistente?.id || '',
         prodotto_nome: nomeProdotto,
         categoria: normalizeCategory(bulkCategoria),
-        um_base: String(row.um || 'PZ').toUpperCase(),
+        um_base: String(row.um || prodottoEsistente?.um_base || 'PZ').toUpperCase(),
         pezzi_per_cartone: Number(row.pezzi) || 1,
         quantita_per_unita: Number(row.quantita) || 1,
         um_acquisto_default: item.um || '',
@@ -367,6 +387,24 @@ function BulkMappingModal({ selected, items, categorie, onMap, onClose }) {
 
         {/* Impostazioni comuni */}
         <div className="bulk-common">
+          <label>
+            Cerca prodotto esistente
+            <input value={productSearch} onChange={(e) => setProductSearch(e.target.value)} placeholder="Scrivi per filtrare..." />
+          </label>
+          <label>
+            Collega a prodotto esistente
+            <select value={prodottoEsistente?.id || ''} onChange={(e) => selectProdottoEsistente(e.target.value)}>
+              <option value="">+ Crea nuovo prodotto</option>
+              {filteredProdottiEsistenti.map((p) => (
+                <option key={p.id} value={p.id}>{p.nome} · {p.categoria || '-'} · {p.um_base || '-'}</option>
+              ))}
+            </select>
+          </label>
+          {prodottoEsistente && (
+            <div className="bulk-existing-badge">
+              Collegato a: <strong>{prodottoEsistente.nome}</strong> ({prodottoEsistente.categoria})
+            </div>
+          )}
           <label>
             Categoria (comune) *
             <select value={bulkCategoria} onChange={(e) => setBulkCategoria(e.target.value)}>
@@ -814,6 +852,7 @@ export default function ControlloPrezzi({ data, onMap, onMapMany, onSaveProduct 
           selected={selected}
           items={nonMappati}
           categorie={categorie}
+          prodotti={anagrafica}
           onMap={saveBulk}
           onClose={() => setBulkOpen(false)}
         />
