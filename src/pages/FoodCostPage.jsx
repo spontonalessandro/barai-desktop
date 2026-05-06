@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Pencil, Plus, Trash2 } from 'lucide-react';
+import { Pencil, Plus, Trash2, AlertTriangle } from 'lucide-react';
 import { euro, percent, toNumber } from '../utils/format.js';
 
 const EMPTY_FORM = {
@@ -30,7 +30,7 @@ function productCost(product, method) {
 }
 
 function defaultIngredient() {
-  return { prodotto_id: '', quantita: '', um: '', costo_unitario_override: '' };
+  return { prodotto_id: '', quantita: '', um: '' };
 }
 
 function optionsForIngredient(products, selectedId, filter) {
@@ -54,10 +54,8 @@ function RecipeModal({ data, onClose, onSave }) {
     prodotto_id: ing.prodotto_id || '',
     quantita: ing.quantita || '',
     um: ing.um || ing.um_base || '',
-    costo_unitario_override: ing.costo_unitario_override || ''
   })) : [defaultIngredient()] }));
   const [productFilter, setProductFilter] = useState('');
-
 
   const categories = useMemo(() => {
     const set = new Set(['MENU', 'CUCINA', 'BAR', 'CAFFETTERIA', 'COCKTAIL', 'VINI', 'EVENTI']);
@@ -93,7 +91,7 @@ function RecipeModal({ data, onClose, onSave }) {
   const preview = useMemo(() => {
     const rows = form.ingredienti.map((ing) => {
       const p = products.find((prod) => prod.id === ing.prodotto_id);
-      const unit = ing.costo_unitario_override ? toNumber(ing.costo_unitario_override) : productCost(p, form.metodo_costo);
+      const unit = productCost(p, form.metodo_costo);
       const total = toNumber(ing.quantita) * unit;
       return { ...ing, product: p, unit, total };
     });
@@ -108,12 +106,16 @@ function RecipeModal({ data, onClose, onSave }) {
     return { rows, costoTotale, costoPorzione, costiFissiPercent, quotaCostiFissi, costoGestionale, foodCost: fc, foodCostGestionale: fcGestionale, margine: prezzo - costoPorzione, margineGestionale: prezzo - costoGestionale };
   }, [form, products]);
 
+  const missingPrices = preview.rows.filter((r) => r.prodotto_id && !r.unit);
+
   async function handleSubmit(event) {
     event.preventDefault();
     await onSave({
       ...form,
       categoria: String(form.categoria || '').toUpperCase(),
-      ingredienti: form.ingredienti.filter((ing) => ing.prodotto_id && toNumber(ing.quantita) > 0)
+      ingredienti: form.ingredienti
+        .filter((ing) => ing.prodotto_id && toNumber(ing.quantita) > 0)
+        .map((ing) => ({ ...ing, costo_unitario_override: null }))
     });
     onClose();
   }
@@ -125,10 +127,17 @@ function RecipeModal({ data, onClose, onSave }) {
           <div>
             <p className="eyebrow">Food Cost</p>
             <h2>{form.id ? 'Modifica ricetta' : 'Nuova ricetta'}</h2>
-            <p>Usa prodotti già mappati nel Controllo Prezzi.</p>
+            <p>Il costo ingredienti viene preso automaticamente dall'ultima fattura acquisto.</p>
           </div>
           <button className="small-btn muted" type="button" onClick={onClose}>×</button>
         </div>
+
+        {missingPrices.length > 0 && (
+          <div className="fc-alert">
+            <AlertTriangle size={14} />
+            {missingPrices.length} ingrediente/i senza prezzo in fattura: controlla il Controllo Prezzi.
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="food-form">
           <div className="form-grid">
@@ -148,16 +157,16 @@ function RecipeModal({ data, onClose, onSave }) {
             </label>
             <label>Costo da usare
               <select value={form.metodo_costo} onChange={(e) => setField('metodo_costo', e.target.value)}>
-                <option value="ULTIMO">Ultimo prezzo</option>
-                <option value="MEDIO">Prezzo medio</option>
-                <option value="MAX">Prezzo massimo</option>
+                <option value="ULTIMO">Ultimo prezzo fattura</option>
+                <option value="MEDIO">Prezzo medio fatture</option>
+                <option value="MAX">Prezzo massimo fatture</option>
               </select>
             </label>
             <label>Costi fissi stimati %
               <input type="number" step="0.1" min="0" value={form.costi_fissi_percent ?? 40} onChange={(e) => setField('costi_fissi_percent', e.target.value)} />
             </label>
             <label>Ricerca prodotti
-              <input value={productFilter} onChange={(e) => setProductFilter(e.target.value)} placeholder="Filtra solo le righe ancora da selezionare..." />
+              <input value={productFilter} onChange={(e) => setProductFilter(e.target.value)} placeholder="Filtra prodotti..." />
             </label>
           </div>
 
@@ -169,11 +178,12 @@ function RecipeModal({ data, onClose, onSave }) {
             <div className="ingredient-list">
               {form.ingredienti.map((ing, index) => {
                 const p = products.find((prod) => prod.id === ing.prodotto_id);
-                const unit = ing.costo_unitario_override ? toNumber(ing.costo_unitario_override) : productCost(p, form.metodo_costo);
+                const unit = productCost(p, form.metodo_costo);
                 const total = unit * toNumber(ing.quantita);
                 const productOptions = optionsForIngredient(products, ing.prodotto_id, productFilter);
+                const noPrice = ing.prodotto_id && !unit;
                 return (
-                  <div className="ingredient-row" key={`${ing.id || 'new'}_${index}`}>
+                  <div className={`ingredient-row${noPrice ? ' ingredient-row-warn' : ''}`} key={`${ing.id || 'new'}_${index}`}>
                     <label>Prodotto
                       <select value={ing.prodotto_id} onChange={(e) => updateIngredient(index, 'prodotto_id', e.target.value)}>
                         <option value="">Seleziona prodotto</option>
@@ -186,12 +196,12 @@ function RecipeModal({ data, onClose, onSave }) {
                     <label>UM
                       <input value={ing.um || p?.um_base || ''} onChange={(e) => updateIngredient(index, 'um', e.target.value)} placeholder="KG/LT/PZ" />
                     </label>
-                    <label>Override €/UM
-                      <input type="number" step="0.01" min="0" value={ing.costo_unitario_override || ''} onChange={(e) => updateIngredient(index, 'costo_unitario_override', e.target.value)} placeholder={unit ? unit.toFixed(2) : ''} />
-                    </label>
                     <div className="ingredient-cost">
-                      <span>{euro(unit)} / {p?.um_base || ing.um || '-'}</span>
-                      <strong>{euro(total)}</strong>
+                      {noPrice
+                        ? <span className="fc-no-price"><AlertTriangle size={12} /> nessun prezzo</span>
+                        : <span>{euro(unit)} / {p?.um_base || ing.um || '-'}<br /><small style={{color:'var(--muted)', fontSize:10}}>{p?.fornitore_ultimo || ''} · {p?.data_ultimo ? p.data_ultimo.slice(0,10) : ''}</small></span>
+                      }
+                      <strong>{total > 0 ? euro(total) : '—'}</strong>
                     </div>
                     <button className="small-btn muted" type="button" onClick={() => removeIngredient(index)}><Trash2 size={14} /></button>
                   </div>
@@ -268,9 +278,9 @@ export default function FoodCostPage({ data, onSaveRecipe, onDeleteRecipe }) {
     <section className="page-section">
       <div className="section-header">
         <div>
-          <p className="eyebrow">Modulo operativo v7</p>
+          <p className="eyebrow">Modulo operativo v9.3</p>
           <h1>Food Cost</h1>
-          <p>Ricette, ingredienti da prodotti mappati, quota costi fissi stimata, costo gestionale e margine.</p>
+          <p>Costi ingredienti aggiornati automaticamente dall'ultima fattura acquisto. Nessun inserimento manuale.</p>
         </div>
         <div className="header-actions">
           <button className="primary-btn" type="button" onClick={openNew}><Plus size={16} /> Nuova ricetta</button>
@@ -279,7 +289,7 @@ export default function FoodCostPage({ data, onSaveRecipe, onDeleteRecipe }) {
 
       <div className="kpi-grid small">
         <div className="kpi-card"><span>Ricette</span><strong>{stats.ricette}</strong><em>prodotti finiti</em></div>
-        <div className="kpi-card"><span>Prodotti disponibili</span><strong>{stats.prodotti}</strong><em>mappati in Controllo Prezzi</em></div>
+        <div className="kpi-card"><span>Prodotti disponibili</span><strong>{stats.prodotti}</strong><em>mappati con prezzo reale</em></div>
         <div className="kpi-card warning"><span>Food cost medio</span><strong>{percent(stats.avg).replace('+', '')}</strong><em>su ricette salvate</em></div>
         <div className="kpi-card"><span>Critiche</span><strong>{stats.critiche}</strong><em>oltre 35%</em></div>
       </div>
@@ -293,30 +303,17 @@ export default function FoodCostPage({ data, onSaveRecipe, onDeleteRecipe }) {
             {categories.map((cat) => <option key={cat} value={cat}>{cat}</option>)}
           </select>
         </label>
-        <div className="hint-inline">I costi fissi sono stimati al 40% di default. Più avanti verranno sostituiti dai dati reali del controllo di gestione.</div>
+        <div className="hint-inline">Il costo di ogni ingrediente viene preso dall'ultima fattura acquisto del prodotto mappato.</div>
       </div>
 
       <div className="card table-card">
         <div className="card-header-row">
-          <div>
-            <h2>Ricette</h2>
-            <p>{filtered.length} ricette visualizzate.</p>
-          </div>
+          <div><h2>Ricette</h2><p>{filtered.length} ricette visualizzate.</p></div>
         </div>
         <table>
           <thead>
             <tr>
-              <th>Ricetta</th>
-              <th>Categoria</th>
-              <th className="right">Prezzo</th>
-              <th className="right">Materie</th>
-              <th className="right">Costi fissi</th>
-              <th className="right">Costo gest.</th>
-              <th className="right">FC gest.</th>
-              <th className="right">Margine gest.</th>
-              <th>Stato</th>
-              <th>Ingredienti</th>
-              <th></th>
+              <th>Ricetta</th><th>Categoria</th><th className="right">Prezzo</th><th className="right">Materie</th><th className="right">Costi fissi</th><th className="right">Costo gest.</th><th className="right">FC gest.</th><th className="right">Margine gest.</th><th>Stato</th><th>Ingredienti</th><th></th>
             </tr>
           </thead>
           <tbody>
@@ -324,9 +321,14 @@ export default function FoodCostPage({ data, onSaveRecipe, onDeleteRecipe }) {
               <tr><td colSpan="11" className="empty-cell">Nessuna ricetta ancora creata.</td></tr>
             ) : filtered.map((r) => {
               const status = foodCostStatus(r.food_cost_gestionale_percent || r.food_cost_percent);
+              const noPrice = (r.ingredienti || []).some((ing) => ing.prodotto_id && !ing.costo_unitario);
               return (
                 <tr key={r.id}>
-                  <td><strong>{r.nome}</strong><small className="row-subtitle">Metodo: {r.metodo_costo || 'ULTIMO'}</small></td>
+                  <td>
+                    <strong>{r.nome}</strong>
+                    {noPrice && <span className="fc-warn-chip"><AlertTriangle size={10} /> prezzi mancanti</span>}
+                    <small className="row-subtitle">Metodo: {r.metodo_costo || 'ULTIMO'}</small>
+                  </td>
                   <td>{r.categoria || '-'}</td>
                   <td className="right">{euro(r.prezzo_vendita)}</td>
                   <td className="right">{euro(r.costo_porzione)}</td>

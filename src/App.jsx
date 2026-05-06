@@ -556,7 +556,7 @@ export default function App() {
 
     switch (active) {
       case 'dashboard':
-        return <DashboardPage dashboard={dashboard} scadenze={scadenze} />;
+        return <DashboardPage dashboard={dashboard} scadenze={scadenze} gestioneData={gestioneData} liquidita={primaNotaData?.totals?.saldo ?? 0} scadenzeAperte={dashboard?.totaleAperto ?? 0} />;
       case 'scadenziario':
         return <ScadenziarioPage data={scadenziarioData} onPaid={handlePaid} onPaidMany={handlePaidMany} onSetStatus={handleSetStatus} onSetStatusMany={handleSetStatusMany} onReopen={handleReopen} onSaveFattura={handleSaveFattura} onSaveFornitore={handleSaveFornitore} onSaveRegola={handleSaveRegola} />;
       case 'prima-nota':

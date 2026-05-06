@@ -1218,6 +1218,42 @@ table.compact-table .status-col { width: 104px; }
   color: var(--text);
 }
 
+/* v9.3 - Dashboard CE + Food Cost reale */
+.kpi-ce-verde { border: 2px solid rgba(36,107,79,.28); background: rgba(36,107,79,.07); }
+.kpi-ce-verde strong { color: var(--green); }
+.kpi-ce-giallo { border: 2px solid rgba(148,96,0,.28); background: rgba(148,96,0,.07); }
+.kpi-ce-giallo strong { color: var(--yellow); }
+.kpi-ce-rosso { border: 2px solid rgba(157,62,50,.28); background: rgba(157,62,50,.07); }
+.kpi-ce-rosso strong { color: var(--red); }
+.fc-alert {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: rgba(148,96,0,.10);
+  border: 1px solid rgba(148,96,0,.28);
+  color: var(--yellow);
+  font-size: 13px;
+  font-weight: 850;
+  margin-bottom: 10px;
+}
+.fc-no-price { color: var(--red); font-size: 11px; font-weight: 850; display: flex; align-items: center; gap: 4px; }
+.fc-warn-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 6px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(148,96,0,.12);
+  color: var(--yellow);
+  font-size: 10px;
+  font-weight: 900;
+  vertical-align: middle;
+}
+.ingredient-row-warn { border-color: rgba(148,96,0,.35); background: rgba(148,96,0,.05); }
+
 /* v9.2 - Mappatura bulk prodotti */
 .row-selected { background: rgba(184,107,61,.07); }
 .row-selected td:first-child { border-left: 3px solid var(--accent); }

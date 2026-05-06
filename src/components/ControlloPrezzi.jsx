@@ -560,6 +560,40 @@ export default function ControlloPrezzi({ data, onMap, onMapMany, onSaveProduct 
       .slice(0, 400);
   }, [righe, query, categoria, fornitore]);
 
+  const fornitori = useMemo(() => {
+    const meseCorrente = new Date().toISOString().slice(0, 7);
+    const mesePrecedente = (() => {
+      const d = new Date();
+      d.setMonth(d.getMonth() - 1);
+      return d.toISOString().slice(0, 7);
+    })();
+    const map = new Map();
+    for (const r of righe) {
+      const nome = r.fornitore_nome || 'Sconosciuto';
+      const totale = Number(r.totale_riga || 0);
+      const mese = (r.data_fattura || '').slice(0, 7);
+      const prodId = r.prodotto_id || '';
+      const fatId = r.fattura_id || '';
+      if (!map.has(nome)) map.set(nome, { nome, totale: 0, corrente: 0, precedente: 0, prodotti: new Set(), fatture: new Set(), dataUltimo: '' });
+      const f = map.get(nome);
+      f.totale += totale;
+      if (mese === meseCorrente) f.corrente += totale;
+      if (mese === mesePrecedente) f.precedente += totale;
+      if (prodId) f.prodotti.add(prodId);
+      if (fatId) f.fatture.add(fatId);
+      if (!f.dataUltimo || mese > f.dataUltimo) f.dataUltimo = mese;
+    }
+    return Array.from(map.values())
+      .map((f) => ({
+        ...f,
+        prodotti: f.prodotti.size,
+        fatture: f.fatture.size,
+        delta: f.precedente > 0 ? ((f.corrente - f.precedente) / f.precedente) * 100 : null
+      }))
+      .filter((f) => !query || f.nome.toLowerCase().includes(query.toLowerCase()))
+      .sort((a, b) => b.totale - a.totale);
+  }, [righe, query]);
+
   function toggleSelect(key) {
     setSelected((prev) => {
       const next = new Set(prev);
@@ -692,6 +726,7 @@ export default function ControlloPrezzi({ data, onMap, onMapMany, onSaveProduct 
       <div className="subnav">
         <button className={tab === 'dashboard' ? 'selected' : ''} onClick={() => setTab('dashboard')}>Storico prezzi</button>
         <button className={tab === 'mapping' ? 'selected' : ''} onClick={() => setTab('mapping')}>Non mappati</button>
+        <button className={tab === 'fornitori' ? 'selected' : ''} onClick={() => setTab('fornitori')}>Fornitori</button>
         <button className={tab === 'righe' ? 'selected' : ''} onClick={() => setTab('righe')}>Righe XML</button>
       </div>
 
@@ -817,6 +852,46 @@ export default function ControlloPrezzi({ data, onMap, onMapMany, onSaveProduct 
                 );
               })}
               {filteredNonMappati.length === 0 && <tr><td colSpan="9" className="empty-cell">Tutti i prodotti risultano mappati.</td></tr>}
+            </tbody>
+          </table>
+        )}
+
+        {tab === 'fornitori' && (
+          <table className="compact-table">
+            <thead>
+              <tr>
+                <th>Fornitore</th>
+                <th className="right">Spesa totale</th>
+                <th className="right">Mese corrente</th>
+                <th className="right">Mese prec.</th>
+                <th className="right">Δ mese</th>
+                <th className="right">Prodotti</th>
+                <th className="right">Fatture</th>
+                <th>Ultimo acquisto</th>
+              </tr>
+            </thead>
+            <tbody>
+              {fornitori.map((f) => {
+                const deltaPos = f.delta !== null && f.delta > 5;
+                const deltaNeg = f.delta !== null && f.delta < -5;
+                return (
+                  <tr key={f.nome}>
+                    <td><strong>{f.nome}</strong></td>
+                    <td className="right"><strong>{euro(f.totale)}</strong></td>
+                    <td className="right">{f.corrente > 0 ? euro(f.corrente) : <span className="muted-line">—</span>}</td>
+                    <td className="right">{f.precedente > 0 ? euro(f.precedente) : <span className="muted-line">—</span>}</td>
+                    <td className="right">
+                      {f.delta !== null
+                        ? <span className={`delta-badge ${deltaPos ? 'delta-up' : deltaNeg ? 'delta-down' : 'delta-flat'}`}>{f.delta >= 0 ? '+' : ''}{f.delta.toFixed(1)}%</span>
+                        : <span className="muted-line">—</span>}
+                    </td>
+                    <td className="right">{f.prodotti}</td>
+                    <td className="right">{f.fatture}</td>
+                    <td>{f.dataUltimo || '-'}</td>
+                  </tr>
+                );
+              })}
+              {fornitori.length === 0 && <tr><td colSpan="8" className="empty-cell">Nessun dato fornitore disponibile.</td></tr>}
             </tbody>
           </table>
         )}
