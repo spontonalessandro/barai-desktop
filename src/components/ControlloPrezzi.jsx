@@ -338,12 +338,16 @@ function BulkMappingModal({ selected, items, categorie, prodotti, onMap, onClose
     }
   }
 
-  const initRow = (item) => ({
-    nome: item.descrizione_originale,
-    um: guessUm(item.descrizione_originale, item.um) || 'PZ',
-    pezzi: guessPezziPerCartone(item.descrizione_originale) || 1,
-    quantita: guessQuantitaPerUnita(item.descrizione_originale, guessUm(item.descrizione_originale, item.um)) || 1,
-  });
+  const VALID_UM_BULK = ['LT', 'PZ', 'KG', 'CRT'];
+  const initRow = (item) => {
+    const guessed = (guessUm(item.descrizione_originale, item.um) || 'PZ').toUpperCase();
+    return {
+      nome: item.descrizione_originale,
+      um: VALID_UM_BULK.includes(guessed) ? guessed : 'PZ',
+      pezzi: guessPezziPerCartone(item.descrizione_originale) || 1,
+      quantita: guessQuantitaPerUnita(item.descrizione_originale, guessUm(item.descrizione_originale, item.um)) || 1,
+    };
+  };
 
   const [rows, setRows] = useState(() => Object.fromEntries(selectedItems.map((item) => [item.key || item.descrizione_originale, initRow(item)])));
 
