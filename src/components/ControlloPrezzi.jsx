@@ -560,7 +560,7 @@ export default function ControlloPrezzi({ data, onMap, onMapMany, onSaveProduct 
       .slice(0, 400);
   }, [righe, query, categoria, fornitore]);
 
-  const fornitori = useMemo(() => {
+  const analisiForni = useMemo(() => {
     const meseCorrente = new Date().toISOString().slice(0, 7);
     const mesePrecedente = (() => {
       const d = new Date();
@@ -871,7 +871,7 @@ export default function ControlloPrezzi({ data, onMap, onMapMany, onSaveProduct 
               </tr>
             </thead>
             <tbody>
-              {fornitori.map((f) => {
+              {analisiForni.map((f) => {
                 const deltaPos = f.delta !== null && f.delta > 5;
                 const deltaNeg = f.delta !== null && f.delta < -5;
                 return (
@@ -891,7 +891,7 @@ export default function ControlloPrezzi({ data, onMap, onMapMany, onSaveProduct 
                   </tr>
                 );
               })}
-              {fornitori.length === 0 && <tr><td colSpan="8" className="empty-cell">Nessun dato fornitore disponibile.</td></tr>}
+              {analisiForni.length === 0 && <tr><td colSpan="8" className="empty-cell">Nessun dato fornitore disponibile.</td></tr>}
             </tbody>
           </table>
         )}
