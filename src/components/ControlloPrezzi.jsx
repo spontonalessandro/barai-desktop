@@ -396,15 +396,20 @@ function BulkMappingModal({ selected, items, categorie, onMap, onClose }) {
               <tr>
                 <th>Descrizione originale</th>
                 <th>Fornitore</th>
+                <th className="right">P.Unit XML</th>
                 <th>UM</th>
                 <th>Pz/cartone</th>
                 <th>Qt/unità</th>
+                <th className="right">Prezzo base calc.</th>
               </tr>
             </thead>
             <tbody>
               {selectedItems.map((item) => {
                 const key = item.key || item.descrizione_originale;
                 const row = rows[key] || initRow(item);
+                const pezzi = Number(row.pezzi) || 1;
+                const quantita = Number(row.quantita) || 1;
+                const prezzoBase = (item.ultimo_prezzo || 0) / pezzi / quantita;
                 return (
                   <tr key={key}>
                     <td className="supplier-cell">
@@ -412,6 +417,7 @@ function BulkMappingModal({ selected, items, categorie, onMap, onClose }) {
                       <br /><span className="muted-line">{item.descrizione_originale}</span>
                     </td>
                     <td className="supplier-cell">{item.fornitore_nome || '-'}</td>
+                    <td className="right">{euro(item.ultimo_prezzo)}</td>
                     <td>
                       <select className="bulk-inline-select" value={row.um} onChange={(e) => setRow(key, 'um', e.target.value)}>
                         <option value="PZ">PZ</option>
@@ -426,6 +432,7 @@ function BulkMappingModal({ selected, items, categorie, onMap, onClose }) {
                     <td>
                       <input className="bulk-inline-input" type="number" min="0.001" step="0.001" value={row.quantita} onChange={(e) => setRow(key, 'quantita', e.target.value)} />
                     </td>
+                    <td className="right"><strong>{euro(prezzoBase)}</strong></td>
                   </tr>
                 );
               })}

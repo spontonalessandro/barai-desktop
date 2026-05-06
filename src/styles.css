@@ -1267,11 +1267,13 @@ table.compact-table .status-col { width: 104px; }
   border-radius: 14px;
 }
 .bulk-rows-table { table-layout: fixed; width: 100%; }
-.bulk-rows-table th:nth-child(1) { width: 38%; }
-.bulk-rows-table th:nth-child(2) { width: 22%; }
-.bulk-rows-table th:nth-child(3) { width: 10%; }
-.bulk-rows-table th:nth-child(4) { width: 15%; }
-.bulk-rows-table th:nth-child(5) { width: 15%; }
+.bulk-rows-table th:nth-child(1) { width: 30%; }
+.bulk-rows-table th:nth-child(2) { width: 18%; }
+.bulk-rows-table th:nth-child(3) { width: 10%; text-align: right; }
+.bulk-rows-table th:nth-child(4) { width: 8%; }
+.bulk-rows-table th:nth-child(5) { width: 12%; }
+.bulk-rows-table th:nth-child(6) { width: 12%; }
+.bulk-rows-table th:nth-child(7) { width: 10%; text-align: right; }
 .bulk-inline-select {
   border: 1px solid var(--line);
   border-radius: 8px;
