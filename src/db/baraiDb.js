@@ -2224,7 +2224,7 @@ export async function saveProdottoMapping(input) {
   const fornitoreId = input.fornitore_id || '';
   const prodottoNome = normalizeDescrizione(input.prodotto_nome);
   const categoria = normalizeCategoria(input.categoria);
-  const umBase = normalizeDescrizione(input.um_base || input.um);
+  const umBase = normalizeDescrizione(input.um_base || input.um).toUpperCase();
   const pezziPerCartone = Math.max(1, toNumber(input.pezzi_per_cartone || 1));
   const quantitaPerUnita = Math.max(0.000001, toNumber(input.quantita_per_unita || 1));
   const umAcquistoDefault = normalizeDescrizione(input.um_acquisto_default || input.um || '');
@@ -2297,7 +2297,7 @@ export async function saveProdottoAnagrafica(input) {
   const prodottoId = input.prodotto_id || input.id || `prod_${slugId(input.prodotto_nome || input.nome)}`;
   const prodottoNome = normalizeDescrizione(input.prodotto_nome || input.nome);
   const categoria = normalizeCategoria(input.categoria);
-  const umBase = normalizeDescrizione(input.um_base || input.um);
+  const umBase = normalizeDescrizione(input.um_base || input.um).toUpperCase();
   const pezziPerCartone = Math.max(1, toNumber(input.pezzi_per_cartone || 1));
   const quantitaPerUnita = Math.max(0.000001, toNumber(input.quantita_per_unita || 1));
   const umAcquistoDefault = normalizeDescrizione(input.um_acquisto_default || '');

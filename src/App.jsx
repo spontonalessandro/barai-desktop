@@ -338,16 +338,24 @@ export default function App() {
   }
 
   async function handleSaveProdottoMappingBulk(payloads) {
-    try {
-      let totalUpdated = 0;
-      for (const p of payloads) {
+    let totalUpdated = 0;
+    let salvati = 0;
+    const errori = [];
+    for (const p of payloads) {
+      try {
         const result = await saveProdottoMapping(p);
         totalUpdated += result?.updatedRows || 0;
+        salvati++;
+      } catch (err) {
+        errori.push(p.descrizione_originale || '?');
+        writeErrorLog({ module: 'controllo-prezzi', action: 'mappatura-bulk', error: err });
       }
-      await reload(['prezzi', 'foodCost', 'sync']);
-      flash(`${payloads.length} prodotti mappati. Righe aggiornate: ${totalUpdated}.`);
-    } catch (err) {
-      reportError('controllo-prezzi', 'mappatura-bulk', err);
+    }
+    await reload(['prezzi', 'foodCost', 'sync']);
+    if (errori.length === 0) {
+      flash(`${salvati} prodotti mappati. Righe aggiornate: ${totalUpdated}.`);
+    } else {
+      flash(`${salvati} mappati, ${errori.length} saltati (${errori.slice(0, 2).join(', ')}${errori.length > 2 ? '...' : ''}).`, 'warning');
     }
   }
 
