@@ -2224,7 +2224,9 @@ export async function saveProdottoMapping(input) {
   const fornitoreId = input.fornitore_id || '';
   const prodottoNome = normalizeDescrizione(input.prodotto_nome);
   const categoria = normalizeCategoria(input.categoria);
-  const umBase = normalizeDescrizione(input.um_base || input.um).toUpperCase();
+  const ALLOWED_UM = ['LT', 'PZ', 'KG', 'CRT'];
+  const umBaseRaw = normalizeDescrizione(input.um_base || input.um).toUpperCase();
+  const umBase = ALLOWED_UM.includes(umBaseRaw) ? umBaseRaw : 'PZ';
   const pezziPerCartone = Math.max(1, toNumber(input.pezzi_per_cartone || 1));
   const quantitaPerUnita = Math.max(0.000001, toNumber(input.quantita_per_unita || 1));
   const umAcquistoDefault = normalizeDescrizione(input.um_acquisto_default || input.um || '');
@@ -2232,7 +2234,6 @@ export async function saveProdottoMapping(input) {
   if (!descrizione) throw new Error('Descrizione originale mancante.');
   if (!prodottoNome) throw new Error('Inserisci il nome prodotto standard.');
   if (!categoria) throw new Error('La categoria è obbligatoria.');
-  if (!['LT', 'PZ', 'KG', 'CRT'].includes(umBase)) throw new Error('UM base non valida. Usa LT, PZ, KG o CRT.');
 
   const prodottoId = input.prodotto_id || `prod_${slugId(prodottoNome)}`;
   // v7.5.2: il vecchio ID era basato solo sullo slug della descrizione troncato a 64 caratteri.
@@ -2297,17 +2298,17 @@ export async function saveProdottoAnagrafica(input) {
   const prodottoId = input.prodotto_id || input.id || `prod_${slugId(input.prodotto_nome || input.nome)}`;
   const prodottoNome = normalizeDescrizione(input.prodotto_nome || input.nome);
   const categoria = normalizeCategoria(input.categoria);
-  const umBase = normalizeDescrizione(input.um_base || input.um).toUpperCase();
+  const ALLOWED_UM2 = ['LT', 'PZ', 'KG', 'CRT'];
+  const umBaseRaw2 = normalizeDescrizione(input.um_base || input.um).toUpperCase();
+  const umBase = ALLOWED_UM2.includes(umBaseRaw2) ? umBaseRaw2 : 'PZ';
   const pezziPerCartone = Math.max(1, toNumber(input.pezzi_per_cartone || 1));
   const quantitaPerUnita = Math.max(0.000001, toNumber(input.quantita_per_unita || 1));
   const umAcquistoDefault = normalizeDescrizione(input.um_acquisto_default || '');
   const noteConversione = normalizeDescrizione(input.note_conversione || '');
-  const allowedUm = ['LT', 'PZ', 'KG', 'CRT'];
 
   if (!prodottoId) throw new Error('ID prodotto mancante.');
   if (!prodottoNome) throw new Error('Inserisci il nome prodotto standard.');
   if (!categoria) throw new Error('La categoria è obbligatoria.');
-  if (!allowedUm.includes(umBase)) throw new Error('UM base non valida. Usa LT, PZ, KG o CRT.');
 
   if (!isTauriRuntime()) {
     const mem = await initFallback();

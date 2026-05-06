@@ -99,6 +99,7 @@ export default function App() {
   const [syncData, setSyncData] = useState(EMPTY_SYNC);
   const [gestioneData, setGestioneData] = useState(EMPTY_GESTIONE);
   const [notice, setNotice] = useState({ message: '', type: 'info' });
+  const [bulkErrorReport, setBulkErrorReport] = useState(null);
   const startupCloudCheckedRef = useRef(false);
   const closingRef = useRef(false);
   const closeSyncRef = useRef({ ready: false, dbMode: 'loading', syncData: EMPTY_SYNC });
@@ -347,7 +348,7 @@ export default function App() {
         totalUpdated += result?.updatedRows || 0;
         salvati++;
       } catch (err) {
-        errori.push(p.descrizione_originale || '?');
+        errori.push({ nome: p.descrizione_originale || '?', motivo: err?.message || String(err) });
         writeErrorLog({ module: 'controllo-prezzi', action: 'mappatura-bulk', error: err });
       }
     }
@@ -355,7 +356,7 @@ export default function App() {
     if (errori.length === 0) {
       flash(`${salvati} prodotti mappati. Righe aggiornate: ${totalUpdated}.`);
     } else {
-      flash(`${salvati} mappati, ${errori.length} saltati (${errori.slice(0, 2).join(', ')}${errori.length > 2 ? '...' : ''}).`, 'warning');
+      setBulkErrorReport({ salvati, totalUpdated, errori });
     }
   }
 
@@ -584,6 +585,39 @@ export default function App() {
         <Toast message={notice.message} type={notice.type} />
         {renderPage()}
       </main>
+      {bulkErrorReport && (
+        <div className="modal-backdrop">
+          <div className="modal-card" style={{ maxWidth: 560 }}>
+            <div className="modal-header">
+              <div>
+                <p className="eyebrow">Mappatura completata con avvisi</p>
+                <h2>{bulkErrorReport.salvati} salvati · {bulkErrorReport.errori.length} saltati</h2>
+              </div>
+              <button className="icon-btn" onClick={() => setBulkErrorReport(null)}>×</button>
+            </div>
+            {bulkErrorReport.salvati > 0 && (
+              <p style={{ color: 'var(--green)', fontWeight: 850 }}>✓ {bulkErrorReport.salvati} prodotti mappati correttamente (righe aggiornate: {bulkErrorReport.totalUpdated}).</p>
+            )}
+            <p style={{ marginTop: 10, fontWeight: 850 }}>Prodotti non salvati ({bulkErrorReport.errori.length}):</p>
+            <div style={{ maxHeight: 260, overflowY: 'auto', marginTop: 8, border: '1px solid var(--line)', borderRadius: 14 }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                <thead><tr><th style={{ padding: '8px 12px', textAlign: 'left', borderBottom: '1px solid var(--line)', color: 'var(--muted)', fontSize: 10, textTransform: 'uppercase' }}>Prodotto</th><th style={{ padding: '8px 12px', textAlign: 'left', borderBottom: '1px solid var(--line)', color: 'var(--muted)', fontSize: 10, textTransform: 'uppercase' }}>Motivo</th></tr></thead>
+                <tbody>
+                  {bulkErrorReport.errori.map((e, i) => (
+                    <tr key={i}>
+                      <td style={{ padding: '8px 12px', borderBottom: '1px solid rgba(222,214,202,.5)', fontWeight: 750 }}>{e.nome}</td>
+                      <td style={{ padding: '8px 12px', borderBottom: '1px solid rgba(222,214,202,.5)', color: 'var(--red)' }}>{e.motivo}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="form-actions" style={{ marginTop: 16 }}>
+              <button className="primary-btn" onClick={() => setBulkErrorReport(null)}>Chiudi</button>
+            </div>
+          </div>
+        </div>
+      )}
       {closePrompt.open ? (
         <div className="close-sync-backdrop" role="dialog" aria-modal="true">
           <div className="close-sync-modal">
