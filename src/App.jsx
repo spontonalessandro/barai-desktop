@@ -337,6 +337,20 @@ export default function App() {
     , ['prezzi', 'foodCost', 'sync']);
   }
 
+  async function handleSaveProdottoMappingBulk(payloads) {
+    try {
+      let totalUpdated = 0;
+      for (const p of payloads) {
+        const result = await saveProdottoMapping(p);
+        totalUpdated += result?.updatedRows || 0;
+      }
+      await reload(['prezzi', 'foodCost', 'sync']);
+      flash(`${payloads.length} prodotti mappati. Righe aggiornate: ${totalUpdated}.`);
+    } catch (err) {
+      reportError('controllo-prezzi', 'mappatura-bulk', err);
+    }
+  }
+
   function handleSaveProdotto(payload) {
     return runAction('controllo-prezzi', 'modifica-prodotto', (result) => `Prodotto aggiornato. Righe collegate: ${result?.updatedRows || 0}.`, () =>
       saveProdottoAnagrafica(payload)
@@ -541,7 +555,7 @@ export default function App() {
       case 'caricamenti':
         return <CaricamentiPage data={scadenziarioData} gestioneData={gestioneData} onImportXmlAcquisto={handleImportXml} onImportXmlVendita={handleImportXmlVendita} onSaveIncasso={handleSaveIncassoCassa} onImportIncassi={handleImportIncassiCassa} onDeleteIncasso={handleDeleteIncassoCassa} onSaveBusta={handleSaveBustaPaga} onImportBuste={handleImportBustePaga} onDeleteBusta={handleDeleteBustaPaga} onSaveF24={handleSaveVersamentoF24} onImportF24={handleImportF24} onDeleteF24={handleDeleteVersamentoF24} />;
       case 'prezzi':
-        return <ControlloPrezzi data={prezziData} onMap={handleSaveProdottoMapping} onSaveProduct={handleSaveProdotto} />;
+        return <ControlloPrezzi data={prezziData} onMap={handleSaveProdottoMapping} onMapMany={handleSaveProdottoMappingBulk} onSaveProduct={handleSaveProdotto} />;
       case 'food-cost':
         return <FoodCostPage data={foodCostData} onSaveRecipe={handleSaveRicetta} onDeleteRecipe={handleDeleteRicetta} />;
       case 'admin':

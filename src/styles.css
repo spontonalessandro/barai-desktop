@@ -1218,6 +1218,56 @@ table.compact-table .status-col { width: 104px; }
   color: var(--text);
 }
 
+/* v9.2 - Mappatura bulk prodotti */
+.row-selected { background: rgba(184,107,61,.07); }
+.row-selected td:first-child { border-left: 3px solid var(--accent); }
+.bulk-bar {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 14px 18px;
+  border-top: 2px solid var(--accent);
+  background: rgba(184,107,61,.06);
+  border-radius: 0 0 var(--radius) var(--radius);
+}
+.bulk-bar-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 110px;
+}
+.bulk-bar-info strong { font-size: 15px; font-weight: 950; color: var(--accent-dark); }
+.bulk-bar-fields {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  flex: 1;
+  align-items: flex-end;
+}
+.bulk-bar-fields label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 950;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--muted);
+}
+.bulk-bar-fields input,
+.bulk-bar-fields select {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 7px 9px;
+  background: rgba(255,255,255,.85);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 750;
+  min-width: 110px;
+  max-width: 200px;
+}
+
 /* v9.2 - Dashboard gestionale: semaforo + trend */
 .semaforo-grid {
   display: grid;

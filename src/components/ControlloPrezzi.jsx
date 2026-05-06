@@ -308,7 +308,89 @@ function ProductDetail({ product, onClose }) {
   );
 }
 
-export default function ControlloPrezzi({ data, onMap, onSaveProduct }) {
+function BulkMappingBar({ selected, items, categorie, onMap, onDeselect }) {
+  const [nomeMode, setNomeMode] = useState('fattura');
+  const [nomeUnificato, setNomeUnificato] = useState('');
+  const [bulkCategoria, setBulkCategoria] = useState('');
+  const [bulkUm, setBulkUm] = useState('PZ');
+  const [bulkPezzi, setBulkPezzi] = useState(1);
+  const [bulkQuantita, setBulkQuantita] = useState(1);
+  const [saving, setSaving] = useState(false);
+
+  const selectedItems = items.filter((p) => selected.has(p.key || p.descrizione_originale));
+  const categoryOptions = buildCategoryOptions(categorie, '');
+
+  async function saveBulk() {
+    if (!bulkCategoria) return;
+    setSaving(true);
+    const payloads = selectedItems.map((item) => ({
+      ...item,
+      prodotto_id: '',
+      prodotto_nome: nomeMode === 'unificato' && nomeUnificato.trim() ? nomeUnificato.trim() : item.descrizione_originale,
+      categoria: normalizeCategory(bulkCategoria),
+      um_base: bulkUm,
+      pezzi_per_cartone: Number(bulkPezzi) || 1,
+      quantita_per_unita: Number(bulkQuantita) || 1,
+      um_acquisto_default: item.um || '',
+      note_conversione: Number(bulkPezzi) > 1 ? `Prezzo XML diviso per ${bulkPezzi} pezzi/cartone` : ''
+    }));
+    await onMap(payloads);
+    setSaving(false);
+  }
+
+  return (
+    <div className="bulk-bar">
+      <div className="bulk-bar-info">
+        <strong>{selectedItems.length} selezionati</strong>
+        <button className="small-btn muted" onClick={onDeselect}>Deseleziona</button>
+      </div>
+      <div className="bulk-bar-fields">
+        <label>
+          Categoria *
+          <select value={bulkCategoria} onChange={(e) => setBulkCategoria(e.target.value)}>
+            <option value="">Scegli...</option>
+            {categoryOptions.map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
+        </label>
+        <label>
+          Nome prodotto
+          <select value={nomeMode} onChange={(e) => setNomeMode(e.target.value)}>
+            <option value="fattura">Usa nome fattura</option>
+            <option value="unificato">Nome unificato</option>
+          </select>
+        </label>
+        {nomeMode === 'unificato' && (
+          <label>
+            Nome unificato
+            <input value={nomeUnificato} onChange={(e) => setNomeUnificato(e.target.value)} placeholder="Es. Energia elettrica" />
+          </label>
+        )}
+        <label>
+          UM
+          <select value={bulkUm} onChange={(e) => setBulkUm(e.target.value)}>
+            <option value="PZ">PZ</option>
+            <option value="LT">LT</option>
+            <option value="KG">KG</option>
+            <option value="CRT">CRT</option>
+          </select>
+        </label>
+        <label>
+          Pz/cartone
+          <input type="number" min="1" step="1" value={bulkPezzi} onChange={(e) => setBulkPezzi(e.target.value)} />
+        </label>
+        <label>
+          Qt/unità
+          <input type="number" min="0.001" step="0.001" value={bulkQuantita} onChange={(e) => setBulkQuantita(e.target.value)} />
+        </label>
+      </div>
+      <button className="primary-btn" onClick={saveBulk} disabled={saving || !bulkCategoria}>
+        {saving ? 'Mappatura...' : `Mappa ${selectedItems.length} prodotti`}
+      </button>
+    </div>
+  );
+}
+
+export default function ControlloPrezzi({ data, onMap, onMapMany, onSaveProduct }) {
   const [tab, setTab] = useState('dashboard');
   const [query, setQuery] = useState('');
   const [categoria, setCategoria] = useState('');
@@ -318,6 +400,7 @@ export default function ControlloPrezzi({ data, onMap, onSaveProduct }) {
   const [mapItem, setMapItem] = useState(null);
   const [detailProduct, setDetailProduct] = useState(null);
   const [editProduct, setEditProduct] = useState(null);
+  const [selected, setSelected] = useState(new Set());
 
   const prodotti = data?.prodotti || [];
   const nonMappati = data?.nonMappati || [];
@@ -373,6 +456,30 @@ export default function ControlloPrezzi({ data, onMap, onSaveProduct }) {
       .slice(0, 400);
   }, [righe, query, categoria, fornitore]);
 
+  function toggleSelect(key) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.has(key) ? next.delete(key) : next.add(key);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    if (filteredNonMappati.every((p) => selected.has(p.key || p.descrizione_originale))) {
+      setSelected((prev) => {
+        const next = new Set(prev);
+        filteredNonMappati.forEach((p) => next.delete(p.key || p.descrizione_originale));
+        return next;
+      });
+    } else {
+      setSelected((prev) => {
+        const next = new Set(prev);
+        filteredNonMappati.forEach((p) => next.add(p.key || p.descrizione_originale));
+        return next;
+      });
+    }
+  }
+
   async function saveMapping(payload) {
     await onMap(payload);
     setMapItem(null);
@@ -382,6 +489,11 @@ export default function ControlloPrezzi({ data, onMap, onSaveProduct }) {
     if (!onSaveProduct) return;
     await onSaveProduct(payload);
     setEditProduct(null);
+  }
+
+  async function saveBulk(payloads) {
+    if (onMapMany) await onMapMany(payloads);
+    setSelected(new Set());
   }
 
   async function quickMap(item) {
@@ -547,29 +659,59 @@ export default function ControlloPrezzi({ data, onMap, onSaveProduct }) {
         )}
 
         {tab === 'mapping' && (
-          <table className="compact-table mapping-table">
-            <thead><tr><th>Descrizione originale</th><th>Fornitore</th><th>UM</th><th>Suggerito</th><th>Pz/cart.</th><th>Qt/unità</th><th>Ultimo prezzo</th><th>Ultimo acquisto</th><th>Righe</th><th>Azione</th></tr></thead>
-            <tbody>
-              {filteredNonMappati.map((p) => (
-                <tr key={p.key}>
-                  <td className="supplier-cell"><strong>{p.descrizione_originale}</strong><br /><span className="muted-line">fatt. {p.esempio_fattura || '-'}</span></td>
-                  <td className="supplier-cell">{p.fornitore_nome || '-'}</td>
-                  <td>{p.um || '-'}</td>
-                  <td><span className="mini-chip">{guessCategoria(p.descrizione_originale) || 'Categoria?'}</span></td>
-                  <td className="right">{guessPezziPerCartone(p.descrizione_originale) > 1 ? guessPezziPerCartone(p.descrizione_originale) : '-'}</td>
-                  <td className="right">{guessQuantitaPerUnita(p.descrizione_originale, guessUm(p.descrizione_originale, p.um)) > 1 ? guessQuantitaPerUnita(p.descrizione_originale, guessUm(p.descrizione_originale, p.um)) : '-'}</td>
-                  <td className="right">{euro(p.ultimo_prezzo)}</td>
-                  <td>{formatDate(p.data_ultimo)}</td>
-                  <td>{p.righe_count}</td>
-                  <td className="row-actions">
-                    <button className="small-btn" onClick={() => setMapItem(p)}>Mappa</button>
-                    <button className="small-btn muted" onClick={() => quickMap(p)}>Rapida</button>
-                  </td>
+          <>
+            <table className="compact-table mapping-table">
+              <thead>
+                <tr>
+                  <th className="check-col">
+                    <input
+                      type="checkbox"
+                      checked={filteredNonMappati.length > 0 && filteredNonMappati.every((p) => selected.has(p.key || p.descrizione_originale))}
+                      onChange={toggleSelectAll}
+                      title="Seleziona/deseleziona tutti i filtrati"
+                    />
+                  </th>
+                  <th>Descrizione originale</th><th>Fornitore</th><th>UM</th><th>Suggerito</th><th>Pz/cart.</th><th>Qt/unità</th><th>Ultimo prezzo</th><th>Ultimo acquisto</th><th>Righe</th><th>Azione</th>
                 </tr>
-              ))}
-              {filteredNonMappati.length === 0 && <tr><td colSpan="10" className="empty-cell">Tutti i prodotti risultano mappati.</td></tr>}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {filteredNonMappati.map((p) => {
+                  const key = p.key || p.descrizione_originale;
+                  const isSelected = selected.has(key);
+                  return (
+                    <tr key={key} className={isSelected ? 'row-selected' : ''}>
+                      <td className="check-col">
+                        <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(key)} />
+                      </td>
+                      <td className="supplier-cell"><strong>{p.descrizione_originale}</strong><br /><span className="muted-line">fatt. {p.esempio_fattura || '-'}</span></td>
+                      <td className="supplier-cell">{p.fornitore_nome || '-'}</td>
+                      <td>{p.um || '-'}</td>
+                      <td><span className="mini-chip">{guessCategoria(p.descrizione_originale) || 'Categoria?'}</span></td>
+                      <td className="right">{guessPezziPerCartone(p.descrizione_originale) > 1 ? guessPezziPerCartone(p.descrizione_originale) : '-'}</td>
+                      <td className="right">{guessQuantitaPerUnita(p.descrizione_originale, guessUm(p.descrizione_originale, p.um)) > 1 ? guessQuantitaPerUnita(p.descrizione_originale, guessUm(p.descrizione_originale, p.um)) : '-'}</td>
+                      <td className="right">{euro(p.ultimo_prezzo)}</td>
+                      <td>{formatDate(p.data_ultimo)}</td>
+                      <td>{p.righe_count}</td>
+                      <td className="row-actions">
+                        <button className="small-btn" onClick={() => setMapItem(p)}>Mappa</button>
+                        <button className="small-btn muted" onClick={() => quickMap(p)}>Rapida</button>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {filteredNonMappati.length === 0 && <tr><td colSpan="11" className="empty-cell">Tutti i prodotti risultano mappati.</td></tr>}
+              </tbody>
+            </table>
+            {selected.size > 0 && (
+              <BulkMappingBar
+                selected={selected}
+                items={nonMappati}
+                categorie={categorie}
+                onMap={saveBulk}
+                onDeselect={() => setSelected(new Set())}
+              />
+            )}
+          </>
         )}
 
         {tab === 'righe' && (
