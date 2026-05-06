@@ -438,11 +438,11 @@ function BulkMappingModal({ selected, items, categorie, prodotti, onMap, onClose
               <tr>
                 <th>Descrizione originale</th>
                 <th>Fornitore</th>
-                <th className="right">P.Unit XML</th>
-                <th>UM</th>
+                <th className="right">Prezzo fattura</th>
+                <th>UM base</th>
                 <th>Pz/cartone</th>
-                <th>Qt/unità</th>
-                <th className="right">Prezzo base calc.</th>
+                <th>Qt/UM base</th>
+                <th className="right">€/UM base (÷pz÷qt)</th>
               </tr>
             </thead>
             <tbody>
