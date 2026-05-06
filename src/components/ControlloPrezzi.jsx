@@ -308,84 +308,138 @@ function ProductDetail({ product, onClose }) {
   );
 }
 
-function BulkMappingBar({ selected, items, categorie, onMap, onDeselect }) {
-  const [nomeMode, setNomeMode] = useState('fattura');
-  const [nomeUnificato, setNomeUnificato] = useState('');
-  const [bulkCategoria, setBulkCategoria] = useState('');
-  const [bulkUm, setBulkUm] = useState('PZ');
-  const [bulkPezzi, setBulkPezzi] = useState(1);
-  const [bulkQuantita, setBulkQuantita] = useState(1);
-  const [saving, setSaving] = useState(false);
-
+function BulkMappingModal({ selected, items, categorie, onMap, onClose }) {
   const selectedItems = items.filter((p) => selected.has(p.key || p.descrizione_originale));
   const categoryOptions = buildCategoryOptions(categorie, '');
 
+  const [bulkCategoria, setBulkCategoria] = useState('');
+  const [nomeMode, setNomeMode] = useState('fattura');
+  const [nomeUnificato, setNomeUnificato] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const initRow = (item) => ({
+    nome: item.descrizione_originale,
+    um: guessUm(item.descrizione_originale, item.um) || 'PZ',
+    pezzi: guessPezziPerCartone(item.descrizione_originale) || 1,
+    quantita: guessQuantitaPerUnita(item.descrizione_originale, guessUm(item.descrizione_originale, item.um)) || 1,
+  });
+
+  const [rows, setRows] = useState(() => Object.fromEntries(selectedItems.map((item) => [item.key || item.descrizione_originale, initRow(item)])));
+
+  function setRow(key, field, value) {
+    setRows((prev) => ({ ...prev, [key]: { ...prev[key], [field]: value } }));
+  }
+
+  // Applica categoria/nomeMode a tutte le righe visivamente (solo lettura ai fini del payload)
   async function saveBulk() {
     if (!bulkCategoria) return;
     setSaving(true);
-    const payloads = selectedItems.map((item) => ({
-      ...item,
-      prodotto_id: '',
-      prodotto_nome: nomeMode === 'unificato' && nomeUnificato.trim() ? nomeUnificato.trim() : item.descrizione_originale,
-      categoria: normalizeCategory(bulkCategoria),
-      um_base: bulkUm,
-      pezzi_per_cartone: Number(bulkPezzi) || 1,
-      quantita_per_unita: Number(bulkQuantita) || 1,
-      um_acquisto_default: item.um || '',
-      note_conversione: Number(bulkPezzi) > 1 ? `Prezzo XML diviso per ${bulkPezzi} pezzi/cartone` : ''
-    }));
+    const payloads = selectedItems.map((item) => {
+      const key = item.key || item.descrizione_originale;
+      const row = rows[key] || initRow(item);
+      const nomeProdotto = nomeMode === 'unificato' && nomeUnificato.trim() ? nomeUnificato.trim() : item.descrizione_originale;
+      return {
+        ...item,
+        prodotto_id: '',
+        prodotto_nome: nomeProdotto,
+        categoria: normalizeCategory(bulkCategoria),
+        um_base: String(row.um || 'PZ').toUpperCase(),
+        pezzi_per_cartone: Number(row.pezzi) || 1,
+        quantita_per_unita: Number(row.quantita) || 1,
+        um_acquisto_default: item.um || '',
+        note_conversione: Number(row.pezzi) > 1 ? `Prezzo XML diviso per ${row.pezzi} pezzi/cartone` : ''
+      };
+    });
     await onMap(payloads);
     setSaving(false);
   }
 
   return (
-    <div className="bulk-bar">
-      <div className="bulk-bar-info">
-        <strong>{selectedItems.length} selezionati</strong>
-        <button className="small-btn muted" onClick={onDeselect}>Deseleziona</button>
-      </div>
-      <div className="bulk-bar-fields">
-        <label>
-          Categoria *
-          <select value={bulkCategoria} onChange={(e) => setBulkCategoria(e.target.value)}>
-            <option value="">Scegli...</option>
-            {categoryOptions.map((c) => <option key={c} value={c}>{c}</option>)}
-          </select>
-        </label>
-        <label>
-          Nome prodotto
-          <select value={nomeMode} onChange={(e) => setNomeMode(e.target.value)}>
-            <option value="fattura">Usa nome fattura</option>
-            <option value="unificato">Nome unificato</option>
-          </select>
-        </label>
-        {nomeMode === 'unificato' && (
+    <div className="modal-backdrop">
+      <div className="modal-card bulk-modal">
+        <div className="modal-header">
+          <div>
+            <p className="eyebrow">Mappatura multipla</p>
+            <h2>{selectedItems.length} prodotti selezionati</h2>
+          </div>
+          <button className="icon-btn" onClick={onClose}>×</button>
+        </div>
+
+        {/* Impostazioni comuni */}
+        <div className="bulk-common">
           <label>
-            Nome unificato
-            <input value={nomeUnificato} onChange={(e) => setNomeUnificato(e.target.value)} placeholder="Es. Energia elettrica" />
+            Categoria (comune) *
+            <select value={bulkCategoria} onChange={(e) => setBulkCategoria(e.target.value)}>
+              <option value="">Scegli categoria...</option>
+              {categoryOptions.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
           </label>
-        )}
-        <label>
-          UM
-          <select value={bulkUm} onChange={(e) => setBulkUm(e.target.value)}>
-            <option value="PZ">PZ</option>
-            <option value="LT">LT</option>
-            <option value="KG">KG</option>
-            <option value="CRT">CRT</option>
-          </select>
-        </label>
-        <label>
-          Pz/cartone
-          <input type="number" min="1" step="1" value={bulkPezzi} onChange={(e) => setBulkPezzi(e.target.value)} />
-        </label>
-        <label>
-          Qt/unità
-          <input type="number" min="0.001" step="0.001" value={bulkQuantita} onChange={(e) => setBulkQuantita(e.target.value)} />
-        </label>
+          <label>
+            Nome prodotto
+            <select value={nomeMode} onChange={(e) => setNomeMode(e.target.value)}>
+              <option value="fattura">Usa nome fattura (uno per uno)</option>
+              <option value="unificato">Nome unificato per tutti</option>
+            </select>
+          </label>
+          {nomeMode === 'unificato' && (
+            <label className="bulk-nome-input">
+              Nome unificato
+              <input value={nomeUnificato} onChange={(e) => setNomeUnificato(e.target.value)} placeholder="Es. Energia elettrica" />
+            </label>
+          )}
+        </div>
+
+        {/* Tabella righe con pezzi/qt individuali */}
+        <div className="bulk-table-wrap">
+          <table className="compact-table bulk-rows-table">
+            <thead>
+              <tr>
+                <th>Descrizione originale</th>
+                <th>Fornitore</th>
+                <th>UM</th>
+                <th>Pz/cartone</th>
+                <th>Qt/unità</th>
+              </tr>
+            </thead>
+            <tbody>
+              {selectedItems.map((item) => {
+                const key = item.key || item.descrizione_originale;
+                const row = rows[key] || initRow(item);
+                return (
+                  <tr key={key}>
+                    <td className="supplier-cell">
+                      <strong>{nomeMode === 'unificato' && nomeUnificato.trim() ? nomeUnificato.trim() : item.descrizione_originale}</strong>
+                      <br /><span className="muted-line">{item.descrizione_originale}</span>
+                    </td>
+                    <td className="supplier-cell">{item.fornitore_nome || '-'}</td>
+                    <td>
+                      <select className="bulk-inline-select" value={row.um} onChange={(e) => setRow(key, 'um', e.target.value)}>
+                        <option value="PZ">PZ</option>
+                        <option value="LT">LT</option>
+                        <option value="KG">KG</option>
+                        <option value="CRT">CRT</option>
+                      </select>
+                    </td>
+                    <td>
+                      <input className="bulk-inline-input" type="number" min="1" step="1" value={row.pezzi} onChange={(e) => setRow(key, 'pezzi', e.target.value)} />
+                    </td>
+                    <td>
+                      <input className="bulk-inline-input" type="number" min="0.001" step="0.001" value={row.quantita} onChange={(e) => setRow(key, 'quantita', e.target.value)} />
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="form-actions" style={{ marginTop: 14 }}>
+          <button className="ghost-btn" onClick={onClose} disabled={saving}>Annulla</button>
+          <button className="primary-btn" onClick={saveBulk} disabled={saving || !bulkCategoria}>
+            {saving ? 'Mappatura in corso...' : `Mappa ${selectedItems.length} prodotti`}
+          </button>
+        </div>
       </div>
-      <button className="primary-btn" onClick={saveBulk} disabled={saving || !bulkCategoria}>
-        {saving ? 'Mappatura...' : `Mappa ${selectedItems.length} prodotti`}
-      </button>
     </div>
   );
 }
@@ -401,6 +455,7 @@ export default function ControlloPrezzi({ data, onMap, onMapMany, onSaveProduct 
   const [detailProduct, setDetailProduct] = useState(null);
   const [editProduct, setEditProduct] = useState(null);
   const [selected, setSelected] = useState(new Set());
+  const [bulkOpen, setBulkOpen] = useState(false);
 
   const prodotti = data?.prodotti || [];
   const nonMappati = data?.nonMappati || [];
@@ -494,6 +549,7 @@ export default function ControlloPrezzi({ data, onMap, onMapMany, onSaveProduct 
   async function saveBulk(payloads) {
     if (onMapMany) await onMapMany(payloads);
     setSelected(new Set());
+    setBulkOpen(false);
   }
 
   async function quickMap(item) {
@@ -627,10 +683,18 @@ export default function ControlloPrezzi({ data, onMap, onMapMany, onSaveProduct 
         </div>
       </div>
 
-      <div className="card table-card price-card">
-        <div className="toolbar price-toolbar compact-toolbar">
+      <div className=”card table-card price-card”>
+        <div className=”toolbar price-toolbar compact-toolbar”>
           <span>{tab === 'mapping' ? `${filteredNonMappati.length} risultati` : tab === 'righe' ? `${filteredRighe.length} righe` : `${filteredProdotti.length} prodotti`}</span>
-          <span className="muted-line">Suggerimento: usa “Solo aumenti” per vedere subito gli aumenti oltre soglia.</span>
+          {tab === 'mapping' && selected.size > 0 ? (
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <span className=”muted-line”>{selected.size} selezionati</span>
+              <button className=”small-btn muted” onClick={() => setSelected(new Set())}>Deseleziona</button>
+              <button className=”primary-btn” onClick={() => setBulkOpen(true)}>Mappa {selected.size} selezionati →</button>
+            </div>
+          ) : (
+            <span className=”muted-line”>{tab === 'mapping' ? 'Seleziona prodotti per mapparli in gruppo' : 'Suggerimento: usa “Solo aumenti” per vedere subito gli aumenti oltre soglia.'}</span>
+          )}
         </div>
 
         {tab === 'dashboard' && (
@@ -659,59 +723,53 @@ export default function ControlloPrezzi({ data, onMap, onMapMany, onSaveProduct 
         )}
 
         {tab === 'mapping' && (
-          <>
-            <table className="compact-table mapping-table">
-              <thead>
-                <tr>
-                  <th className="check-col">
-                    <input
-                      type="checkbox"
-                      checked={filteredNonMappati.length > 0 && filteredNonMappati.every((p) => selected.has(p.key || p.descrizione_originale))}
-                      onChange={toggleSelectAll}
-                      title="Seleziona/deseleziona tutti i filtrati"
-                    />
-                  </th>
-                  <th>Descrizione originale</th><th>Fornitore</th><th>UM</th><th>Suggerito</th><th>Pz/cart.</th><th>Qt/unità</th><th>Ultimo prezzo</th><th>Ultimo acquisto</th><th>Righe</th><th>Azione</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredNonMappati.map((p) => {
-                  const key = p.key || p.descrizione_originale;
-                  const isSelected = selected.has(key);
-                  return (
-                    <tr key={key} className={isSelected ? 'row-selected' : ''}>
-                      <td className="check-col">
-                        <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(key)} />
-                      </td>
-                      <td className="supplier-cell"><strong>{p.descrizione_originale}</strong><br /><span className="muted-line">fatt. {p.esempio_fattura || '-'}</span></td>
-                      <td className="supplier-cell">{p.fornitore_nome || '-'}</td>
-                      <td>{p.um || '-'}</td>
-                      <td><span className="mini-chip">{guessCategoria(p.descrizione_originale) || 'Categoria?'}</span></td>
-                      <td className="right">{guessPezziPerCartone(p.descrizione_originale) > 1 ? guessPezziPerCartone(p.descrizione_originale) : '-'}</td>
-                      <td className="right">{guessQuantitaPerUnita(p.descrizione_originale, guessUm(p.descrizione_originale, p.um)) > 1 ? guessQuantitaPerUnita(p.descrizione_originale, guessUm(p.descrizione_originale, p.um)) : '-'}</td>
-                      <td className="right">{euro(p.ultimo_prezzo)}</td>
-                      <td>{formatDate(p.data_ultimo)}</td>
-                      <td>{p.righe_count}</td>
-                      <td className="row-actions">
-                        <button className="small-btn" onClick={() => setMapItem(p)}>Mappa</button>
-                        <button className="small-btn muted" onClick={() => quickMap(p)}>Rapida</button>
-                      </td>
-                    </tr>
-                  );
-                })}
-                {filteredNonMappati.length === 0 && <tr><td colSpan="11" className="empty-cell">Tutti i prodotti risultano mappati.</td></tr>}
-              </tbody>
-            </table>
-            {selected.size > 0 && (
-              <BulkMappingBar
-                selected={selected}
-                items={nonMappati}
-                categorie={categorie}
-                onMap={saveBulk}
-                onDeselect={() => setSelected(new Set())}
-              />
-            )}
-          </>
+          <table className="compact-table mapping-table">
+            <thead>
+              <tr>
+                <th style={{ width: 28 }}>
+                  <input
+                    type="checkbox"
+                    checked={filteredNonMappati.length > 0 && filteredNonMappati.every((p) => selected.has(p.key || p.descrizione_originale))}
+                    onChange={toggleSelectAll}
+                    title="Seleziona/deseleziona tutti i filtrati"
+                  />
+                </th>
+                <th>Descrizione originale</th>
+                <th>Fornitore</th>
+                <th>UM</th>
+                <th>Categoria suggerita</th>
+                <th className="right">Ultimo prezzo</th>
+                <th>Data</th>
+                <th className="right">Righe</th>
+                <th>Azione</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredNonMappati.map((p) => {
+                const key = p.key || p.descrizione_originale;
+                const isSelected = selected.has(key);
+                return (
+                  <tr key={key} className={isSelected ? 'row-selected' : ''}>
+                    <td>
+                      <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(key)} />
+                    </td>
+                    <td className="supplier-cell"><strong>{p.descrizione_originale}</strong></td>
+                    <td className="supplier-cell">{p.fornitore_nome || '-'}</td>
+                    <td>{p.um || '-'}</td>
+                    <td><span className="mini-chip">{guessCategoria(p.descrizione_originale) || '?'}</span></td>
+                    <td className="right">{euro(p.ultimo_prezzo)}</td>
+                    <td>{formatDate(p.data_ultimo)}</td>
+                    <td className="right">{p.righe_count}</td>
+                    <td className="row-actions">
+                      <button className="small-btn" onClick={() => setMapItem(p)}>Mappa</button>
+                      <button className="small-btn muted" onClick={() => quickMap(p)}>Rapida</button>
+                    </td>
+                  </tr>
+                );
+              })}
+              {filteredNonMappati.length === 0 && <tr><td colSpan="9" className="empty-cell">Tutti i prodotti risultano mappati.</td></tr>}
+            </tbody>
+          </table>
         )}
 
         {tab === 'righe' && (
@@ -744,6 +802,15 @@ export default function ControlloPrezzi({ data, onMap, onMapMany, onSaveProduct 
       {mapItem && <MappingForm item={mapItem} prodotti={anagrafica} categorie={categorie} onCancel={() => setMapItem(null)} onSave={saveMapping} />}
       {editProduct && <ProductEditForm product={editProduct} categorie={categorie} onCancel={() => setEditProduct(null)} onSave={saveProduct} />}
       {detailProduct && <ProductDetail product={detailProduct} onClose={() => setDetailProduct(null)} />}
+      {bulkOpen && (
+        <BulkMappingModal
+          selected={selected}
+          items={nonMappati}
+          categorie={categorie}
+          onMap={saveBulk}
+          onClose={() => setBulkOpen(false)}
+        />
+      )}
     </section>
   );
 }
