@@ -545,7 +545,7 @@ export default function App() {
       case 'food-cost':
         return <FoodCostPage data={foodCostData} onSaveRecipe={handleSaveRicetta} onDeleteRecipe={handleDeleteRicetta} />;
       case 'admin':
-        return <GestionePage data={gestioneData} />;
+        return <GestionePage data={gestioneData} liquidita={primaNotaData?.totals?.saldo ?? 0} />;
       case 'config':
         return <ConfigPage primaNotaConfig={primaNotaConfig} onSavePrimaNotaConfig={handleSavePrimaNotaConfig} />;
       case 'sync':

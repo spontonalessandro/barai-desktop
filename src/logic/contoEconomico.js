@@ -156,3 +156,11 @@ export function buildContoEconomicoConfronto(input = {}) {
     annoPrecedente: buildContoEconomico({ ...input, mese: shiftMonth(mese, -12) })
   };
 }
+
+export function buildTrendMensile(input = {}, nMesi = 6) {
+  const base = input.mese || currentMonthKey();
+  return Array.from({ length: nMesi }, (_, i) => {
+    const mese = shiftMonth(base, -(nMesi - 1 - i));
+    return buildContoEconomico({ ...input, mese });
+  });
+}

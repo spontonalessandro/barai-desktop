@@ -1218,6 +1218,94 @@ table.compact-table .status-col { width: 104px; }
   color: var(--text);
 }
 
+/* v9.2 - Dashboard gestionale: semaforo + trend */
+.semaforo-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+.semaforo-card {
+  padding: 18px 16px;
+  border-radius: var(--radius);
+  border: 2px solid transparent;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  position: relative;
+}
+.semaforo-verde { background: rgba(36,107,79,.09); border-color: rgba(36,107,79,.26); }
+.semaforo-giallo { background: rgba(148,96,0,.09); border-color: rgba(148,96,0,.26); }
+.semaforo-rosso { background: rgba(157,62,50,.09); border-color: rgba(157,62,50,.26); }
+.semaforo-dot {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+.semaforo-dot-verde { background: var(--green); }
+.semaforo-dot-giallo { background: var(--yellow); }
+.semaforo-dot-rosso { background: var(--red); }
+.semaforo-label {
+  font-size: 11px;
+  font-weight: 950;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .055em;
+  padding-right: 18px;
+}
+.semaforo-value {
+  font-size: 27px;
+  font-weight: 950;
+  letter-spacing: -.04em;
+  line-height: 1.05;
+}
+.semaforo-verde .semaforo-value { color: var(--green); }
+.semaforo-giallo .semaforo-value { color: var(--yellow); }
+.semaforo-rosso .semaforo-value { color: var(--red); }
+.semaforo-hint { font-size: 11px; font-style: normal; color: var(--muted); font-weight: 750; }
+.trend-chart-wrap { margin-top: 14px; }
+.trend-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  height: 150px;
+  padding-bottom: 6px;
+  border-bottom: 2px solid var(--line);
+}
+.trend-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+}
+.trend-bar-wrap {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+}
+.trend-bar {
+  width: 100%;
+  background: var(--accent);
+  border-radius: 6px 6px 0 0;
+  min-height: 0;
+  opacity: .82;
+}
+.trend-ebitda { margin-top: 5px; font-size: 10px; font-weight: 950; }
+.trend-ebitda-verde { color: var(--green); }
+.trend-ebitda-giallo { color: var(--yellow); }
+.trend-ebitda-rosso { color: var(--red); }
+.trend-month-label { margin-top: 3px; font-size: 11px; font-weight: 900; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.trend-ricavi-label { font-size: 9px; color: var(--muted); font-weight: 750; margin-top: 1px; max-width: 100%; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.trend-legend { margin-top: 10px; display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); font-weight: 750; }
+.trend-legend-bar { display: inline-block; width: 14px; height: 10px; border-radius: 3px; background: var(--accent); opacity: .82; }
+.trend-legend-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-left: 8px; }
+@media (max-width: 1180px) { .semaforo-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 768px) { .semaforo-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
 /* v9.1.1 - Caricamenti a tab */
 .tab-bar {
   display: flex;
