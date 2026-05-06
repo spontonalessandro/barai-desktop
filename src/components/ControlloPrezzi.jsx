@@ -683,17 +683,17 @@ export default function ControlloPrezzi({ data, onMap, onMapMany, onSaveProduct 
         </div>
       </div>
 
-      <div className=”card table-card price-card”>
-        <div className=”toolbar price-toolbar compact-toolbar”>
+      <div className="card table-card price-card">
+        <div className="toolbar price-toolbar compact-toolbar">
           <span>{tab === 'mapping' ? filteredNonMappati.length + ' risultati' : tab === 'righe' ? filteredRighe.length + ' righe' : filteredProdotti.length + ' prodotti'}</span>
           {tab === 'mapping' && selected.size > 0 ? (
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              <span className=”muted-line”>{selected.size} selezionati</span>
-              <button className=”small-btn muted” onClick={() => setSelected(new Set())}>Deseleziona</button>
-              <button className=”primary-btn” onClick={() => setBulkOpen(true)}>Mappa {selected.size} selezionati →</button>
+              <span className="muted-line">{selected.size} selezionati</span>
+              <button className="small-btn muted" onClick={() => setSelected(new Set())}>Deseleziona</button>
+              <button className="primary-btn" onClick={() => setBulkOpen(true)}>Mappa {selected.size} selezionati →</button>
             </div>
           ) : (
-            <span className=”muted-line”>{tab === 'mapping' ? 'Seleziona prodotti per mapparli in gruppo' : 'Suggerimento: usa “Solo aumenti” per vedere subito gli aumenti oltre soglia.'}</span>
+            <span className="muted-line">{tab === 'mapping' ? 'Seleziona prodotti per mapparli in gruppo' : 'Suggerimento: usa "Solo aumenti" per vedere subito gli aumenti oltre soglia.'}</span>
           )}
         </div>
 
