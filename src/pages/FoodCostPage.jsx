@@ -237,6 +237,7 @@ export default function FoodCostPage({ data, onSaveRecipe, onDeleteRecipe }) {
   const [modalData, setModalData] = useState(null);
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('TUTTE');
+  const [tab, setTab] = useState('ricette');
 
   const ricette = data?.ricette || [];
   const prodotti = data?.prodotti || [];
@@ -266,6 +267,30 @@ export default function FoodCostPage({ data, onSaveRecipe, onDeleteRecipe }) {
     };
   }, [ricette, prodotti]);
 
+  // Prodotti con aumento prezzo > 5% usati in almeno una ricetta
+  const allertaPrezzi = useMemo(() => {
+    const prodMap = new Map(prodotti.map((p) => [p.id, p]));
+    const risultati = [];
+    for (const r of ricette) {
+      for (const ing of r.ingredienti || []) {
+        const prod = prodMap.get(ing.prodotto_id);
+        if (!prod || !prod.delta_percent || prod.delta_percent < 5) continue;
+        const impatto = (ing.costo_totale || 0) / Math.max(1, Number(r.costo_porzione || 1)) * (prod.delta_percent / 100);
+        risultati.push({
+          ricetta: r.nome,
+          ricettaId: r.id,
+          prodotto: prod.nome,
+          delta: prod.delta_percent,
+          prezzoVecchio: prod.prezzo_precedente,
+          prezzoNuovo: prod.ultimo_prezzo,
+          fcAttuale: r.food_cost_gestionale_percent || r.food_cost_percent || 0,
+          impatto
+        });
+      }
+    }
+    return risultati.sort((a, b) => b.delta - a.delta);
+  }, [ricette, prodotti]);
+
   function openNew() {
     setModalData({ initial: EMPTY_FORM, prodotti, ricette });
   }
@@ -291,10 +316,41 @@ export default function FoodCostPage({ data, onSaveRecipe, onDeleteRecipe }) {
         <div className="kpi-card"><span>Ricette</span><strong>{stats.ricette}</strong><em>prodotti finiti</em></div>
         <div className="kpi-card"><span>Prodotti disponibili</span><strong>{stats.prodotti}</strong><em>mappati con prezzo reale</em></div>
         <div className="kpi-card warning"><span>Food cost medio</span><strong>{percent(stats.avg).replace('+', '')}</strong><em>su ricette salvate</em></div>
-        <div className="kpi-card"><span>Critiche</span><strong>{stats.critiche}</strong><em>oltre 35%</em></div>
+        <div className={`kpi-card${allertaPrezzi.length > 0 ? ' kpi-ce-rosso' : ''}`}><span>Ingredienti aumentati</span><strong>{allertaPrezzi.length}</strong><em>impattano ricette</em></div>
       </div>
 
-      <div className="card toolbar food-toolbar">
+      <div className="subnav">
+        <button className={tab === 'ricette' ? 'selected' : ''} onClick={() => setTab('ricette')}>Ricette</button>
+        <button className={tab === 'allerta' ? 'selected' : ''} onClick={() => setTab('allerta')}>
+          Allerta prezzi {allertaPrezzi.length > 0 && <span style={{ marginLeft: 6, background: 'var(--red)', color: '#fff', borderRadius: 999, padding: '1px 7px', fontSize: 10, fontWeight: 950 }}>{allertaPrezzi.length}</span>}
+        </button>
+      </div>
+
+      {tab === 'allerta' && (
+        <div className="card table-card">
+          <div className="card-header-row">
+            <div><h2>Ingredienti con aumento prezzo {'>'} 5%</h2><p>Ricette che usano prodotti il cui prezzo è aumentato dall'ultimo acquisto precedente.</p></div>
+          </div>
+          <table className="compact-table">
+            <thead><tr><th>Ricetta</th><th>Ingrediente</th><th className="right">Prezzo prec.</th><th className="right">Prezzo attuale</th><th className="right">Δ%</th><th className="right">FC attuale</th></tr></thead>
+            <tbody>
+              {allertaPrezzi.map((a, i) => (
+                <tr key={i}>
+                  <td><strong>{a.ricetta}</strong></td>
+                  <td>{a.prodotto}</td>
+                  <td className="right">{a.prezzoVecchio ? euro(a.prezzoVecchio) : '—'}</td>
+                  <td className="right"><strong>{euro(a.prezzoNuovo)}</strong></td>
+                  <td className="right"><span className="delta-badge delta-up">+{Number(a.delta).toFixed(1)}%</span></td>
+                  <td className="right"><span className={`delta-pill ${a.fcAttuale > 35 ? 'danger' : a.fcAttuale > 30 ? 'warning' : 'success'}`}>{percent(a.fcAttuale).replace('+','')}</span></td>
+                </tr>
+              ))}
+              {allertaPrezzi.length === 0 && <tr><td colSpan="6" className="empty-cell">Nessun aumento rilevante sui prodotti usati nelle ricette.</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {tab === 'ricette' && <div className="card toolbar food-toolbar">
         <label>Cerca
           <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Ricetta o categoria..." />
         </label>
@@ -348,6 +404,8 @@ export default function FoodCostPage({ data, onSaveRecipe, onDeleteRecipe }) {
           </tbody>
         </table>
       </div>
+
+      }
 
       {modalData && <RecipeModal data={modalData} onClose={() => setModalData(null)} onSave={onSaveRecipe} />}
     </section>

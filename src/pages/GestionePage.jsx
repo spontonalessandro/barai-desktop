@@ -158,6 +158,7 @@ export default function GestionePage({ data, liquidita = 0, scadenzeAperte = 0 }
         </div>
         <div className="header-actions">
           <label>Mese<input type="month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} /></label>
+          <button className="ghost-btn" onClick={() => window.print()}>🖨 Stampa / PDF</button>
         </div>
       </div>
 

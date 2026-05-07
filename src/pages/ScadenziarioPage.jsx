@@ -464,10 +464,19 @@ export default function ScadenziarioPage({ data, onPaid, onPaidMany, onSetStatus
             <tbody>
               {filteredScadenze.map((s) => {
                 const selectable = ['APERTO', 'DA_VERIFICARE'].includes(s.stato);
+                const oggi = new Date(); oggi.setHours(0,0,0,0);
+                const scad = s.data_scadenza ? new Date(s.data_scadenza) : null;
+                const giorniAllaScadenza = scad ? Math.ceil((scad - oggi) / 86400000) : null;
+                const urgente = selectable && giorniAllaScadenza !== null && giorniAllaScadenza <= 7;
+                const scaduta = selectable && giorniAllaScadenza !== null && giorniAllaScadenza < 0;
                 return (
-                  <tr key={s.id}>
+                  <tr key={s.id} className={scaduta ? 'row-scaduta' : urgente ? 'row-urgente' : ''}>
                     <td><input type="checkbox" disabled={!selectable} checked={selected.includes(s.id)} onChange={() => toggle(s.id)} /></td>
-                    <td>{formatDate(s.data_scadenza)}</td>
+                    <td>
+                      {formatDate(s.data_scadenza)}
+                      {scaduta && <span className="scad-chip scad-chip-red">scaduta</span>}
+                      {urgente && !scaduta && <span className="scad-chip scad-chip-orange">{giorniAllaScadenza === 0 ? 'oggi' : giorniAllaScadenza + 'gg'}</span>}
+                    </td>
                     <td className="supplier-cell" title={s.fornitore_nome}>{s.fornitore_nome}</td>
                     <td title={s.numero}>{s.numero}</td>
                     <td>{formatDate(s.data_fattura)}</td>

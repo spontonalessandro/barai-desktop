@@ -25,10 +25,22 @@ function CeKpi({ label, value, hint, stato }) {
 }
 
 export default function DashboardPage({ dashboard, scadenze, gestioneData, liquidita = 0, scadenzeAperte = 0 }) {
+  const oggi = new Date(); oggi.setHours(0,0,0,0);
+  const tra7 = new Date(oggi); tra7.setDate(tra7.getDate() + 7);
+
   const prossime = useMemo(
     () => scadenze.filter((s) => ['APERTO', 'DA_VERIFICARE'].includes(s.stato)).slice(0, 6),
     [scadenze]
   );
+
+  const scadenzeUrgenti = useMemo(() => {
+    return scadenze.filter((s) => {
+      if (!['APERTO', 'DA_VERIFICARE'].includes(s.stato)) return false;
+      if (!s.data_scadenza) return false;
+      const d = new Date(s.data_scadenza);
+      return d <= tra7;
+    });
+  }, [scadenze]);
 
   const ce = useMemo(() => {
     if (!gestioneData) return null;
@@ -89,9 +101,10 @@ export default function DashboardPage({ dashboard, scadenze, gestioneData, liqui
           <span>Fatture acquisto</span>
           <strong>{dashboard?.fatture ?? 0}</strong>
         </div>
-        <div className="kpi-card">
-          <span>Scadenze aperte</span>
-          <strong>{dashboard?.scadenzeAperte ?? 0}</strong>
+        <div className={`kpi-card${scadenzeUrgenti.length > 0 ? ' kpi-ce-rosso' : ''}`}>
+          <span>Scade entro 7 giorni</span>
+          <strong>{scadenzeUrgenti.length}</strong>
+          <em>{euro(scadenzeUrgenti.reduce((a, s) => a + Number(s.importo || 0), 0))}</em>
         </div>
         <div className="kpi-card warning">
           <span>Da verificare</span>

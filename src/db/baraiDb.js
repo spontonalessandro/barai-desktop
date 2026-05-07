@@ -2043,7 +2043,9 @@ function buildFoodCostPayload(prodottiPrezzi, ricette = [], ingredienti = []) {
       data_ultimo: p.data_ultimo || '',
       righe_count: p.righe_count || 0,
       pezzi_per_cartone: p.pezzi_per_cartone || 1,
-      quantita_per_unita: p.quantita_per_unita || 1
+      quantita_per_unita: p.quantita_per_unita || 1,
+      delta_percent: toNumber(p.delta_percent),
+      prezzo_precedente: toNumber(p.prezzo_precedente)
     }))
     .sort((a, b) => String(a.nome || '').localeCompare(String(b.nome || '')));
 

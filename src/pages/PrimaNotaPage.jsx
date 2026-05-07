@@ -216,6 +216,14 @@ export default function PrimaNotaPage({ data, onSaveMovement, onDeleteMovement, 
         <button className="ghost-btn" type="button" onClick={() => setFilters({ search: '', tipo: 'Tutti', conto: 'Tutti', categoria: 'Tutte', mese: 'Tutti', origine: 'Tutte' })}>Pulisci</button>
       </div>
 
+      <div className="card" style={{ padding: '14px 18px', display: 'flex', gap: 24, flexWrap: 'wrap', alignItems: 'center' }}>
+        <div><span style={{ fontSize: 11, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '.05em', color: 'var(--muted)' }}>Periodo selezionato</span><br /><strong style={{ fontSize: 20 }}>{filters.mese === 'Tutti' ? 'Tutti i movimenti' : filters.mese}</strong></div>
+        <div><span style={{ fontSize: 11, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '.05em', color: 'var(--muted)' }}>Entrate</span><br /><strong style={{ fontSize: 20, color: 'var(--green)' }}>{euro(filteredTotals.entrate)}</strong></div>
+        <div><span style={{ fontSize: 11, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '.05em', color: 'var(--muted)' }}>Uscite</span><br /><strong style={{ fontSize: 20, color: 'var(--red)' }}>{euro(filteredTotals.uscite)}</strong></div>
+        <div><span style={{ fontSize: 11, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '.05em', color: 'var(--muted)' }}>Saldo periodo</span><br /><strong style={{ fontSize: 20, color: filteredTotals.saldo >= 0 ? 'var(--green)' : 'var(--red)' }}>{euro(filteredTotals.saldo)}</strong></div>
+        {filteredTotals.giroconti > 0 && <div><span style={{ fontSize: 11, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '.05em', color: 'var(--muted)' }}>Giroconti</span><br /><strong style={{ fontSize: 20 }}>{euro(filteredTotals.giroconti)}</strong></div>}
+      </div>
+
       <div className="card table-card">
         <div className="card-header-row compact-header">
           <div>
@@ -264,6 +272,32 @@ export default function PrimaNotaPage({ data, onSaveMovement, onDeleteMovement, 
           </tbody>
         </table>
       </div>
+
+      {filters.mese !== 'Tutti' && (() => {
+        const byCat = filtered.reduce((acc, m) => {
+          if (m.tipo === 'GIROCONTO') return acc;
+          const key = m.categoria || 'Altro';
+          if (!acc[key]) acc[key] = { entrate: 0, uscite: 0 };
+          if (m.tipo === 'ENTRATA') acc[key].entrate += Number(m.importo || 0);
+          if (m.tipo === 'USCITA') acc[key].uscite += Number(m.importo || 0);
+          return acc;
+        }, {});
+        const rows = Object.entries(byCat).sort((a, b) => (b[1].uscite + b[1].entrate) - (a[1].uscite + a[1].entrate));
+        return (
+          <div className="card soft">
+            <h2>Riepilogo per categoria — {filters.mese}</h2>
+            <div className="category-summary-grid">
+              {rows.map(([cat, v]) => (
+                <div className="category-summary-chip" key={cat}>
+                  <span>{cat}</span>
+                  {v.entrate > 0 && <strong style={{ color: 'var(--green)' }}>+{euro(v.entrate)}</strong>}
+                  {v.uscite > 0 && <strong style={{ color: 'var(--red)' }}>-{euro(v.uscite)}</strong>}
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
 
       <div className="cards-grid two">
         <div className="card soft">

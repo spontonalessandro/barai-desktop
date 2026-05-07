@@ -1218,6 +1218,37 @@ table.compact-table .status-col { width: 104px; }
   color: var(--text);
 }
 
+/* Scadenze urgenti */
+.row-urgente td:first-child { border-left: 3px solid var(--yellow); }
+.row-urgente { background: rgba(148,96,0,.05); }
+.row-scaduta td:first-child { border-left: 3px solid var(--red); }
+.row-scaduta { background: rgba(157,62,50,.06); }
+.scad-chip {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 6px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 950;
+  vertical-align: middle;
+}
+.scad-chip-red { background: rgba(157,62,50,.15); color: var(--red); }
+.scad-chip-orange { background: rgba(148,96,0,.15); color: var(--yellow); }
+
+/* Stampa report CE */
+@media print {
+  .sidebar, .header-actions button, .subnav, .toolbar, .card.price-filter-card,
+  .toast, .close-sync-backdrop, .modal-backdrop { display: none !important; }
+  .app-shell { grid-template-columns: 1fr; }
+  .main-content { padding: 0; }
+  .page-section { gap: 10px; }
+  .kpi-grid { grid-template-columns: repeat(4, 1fr); }
+  .semaforo-grid { grid-template-columns: repeat(5, 1fr); }
+  .card, .kpi-card, .semaforo-card { box-shadow: none; border: 1px solid #ccc; background: #fff; }
+  body { background: #fff; }
+}
+
 /* v9.3 - Dashboard CE + Food Cost reale */
 .kpi-ce-verde { border: 2px solid rgba(36,107,79,.28); background: rgba(36,107,79,.07); }
 .kpi-ce-verde strong { color: var(--green); }
