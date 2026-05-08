@@ -567,16 +567,18 @@ export default function ControlloPrezzi({ data, onMap, onMapMany, onSaveProduct 
       return d.toISOString().slice(0, 7);
     };
     const mesi3 = [shiftMese(-2), shiftMese(-1), shiftMese(0)]; // [m-2, m-1, corrente]
+    const annoCorrente = new Date().getFullYear().toString();
     const map = new Map();
     for (const r of righe) {
       const nome = r.fornitore_nome || 'Sconosciuto';
       const totale = Number(r.totale_riga || 0);
       const mese = (r.data_fattura || '').slice(0, 7);
+      const anno = (r.data_fattura || '').slice(0, 4);
       const prodId = r.prodotto_id || '';
       const fatId = r.fattura_id || '';
-      if (!map.has(nome)) map.set(nome, { nome, totaleStorico: 0, m0: 0, m1: 0, m2: 0, prodotti: new Set(), fatture: new Set(), dataUltimo: '' });
+      if (!map.has(nome)) map.set(nome, { nome, totaleAnno: 0, m0: 0, m1: 0, m2: 0, prodotti: new Set(), fatture: new Set(), dataUltimo: '' });
       const f = map.get(nome);
-      f.totaleStorico += totale;
+      if (anno === annoCorrente) f.totaleAnno += totale;
       if (mese === mesi3[0]) f.m0 += totale;
       if (mese === mesi3[1]) f.m1 += totale;
       if (mese === mesi3[2]) f.m2 += totale;
@@ -594,7 +596,7 @@ export default function ControlloPrezzi({ data, onMap, onMapMany, onSaveProduct 
           delta: f.m1 > 0 ? ((f.m2 - f.m1) / f.m1) * 100 : null
         }))
         .filter((f) => !query || f.nome.toLowerCase().includes(query.toLowerCase()))
-        .sort((a, b) => b.totaleStorico - a.totaleStorico)
+        .sort((a, b) => b.totaleAnno - a.totaleAnno)
     };
   }, [righe, query]);
 
@@ -865,7 +867,7 @@ export default function ControlloPrezzi({ data, onMap, onMapMany, onSaveProduct 
             <thead>
               <tr>
                 <th>Fornitore</th>
-                <th className="right">Storico totale</th>
+                <th className="right">Totale {new Date().getFullYear()}</th>
                 <th className="right">{analisiForni.mesi3[0]}</th>
                 <th className="right">{analisiForni.mesi3[1]}</th>
                 <th className="right">{analisiForni.mesi3[2]}</th>
@@ -881,7 +883,7 @@ export default function ControlloPrezzi({ data, onMap, onMapMany, onSaveProduct 
                 return (
                   <tr key={f.nome}>
                     <td><strong>{f.nome}</strong><br /><span className="muted-line">{f.dataUltimo || '-'}</span></td>
-                    <td className="right"><strong>{euro(f.totaleStorico)}</strong></td>
+                    <td className="right"><strong>{euro(f.totaleAnno)}</strong></td>
                     <td className="right">{f.m0 > 0 ? euro(f.m0) : <span className="muted-line">—</span>}</td>
                     <td className="right">{f.m1 > 0 ? euro(f.m1) : <span className="muted-line">—</span>}</td>
                     <td className="right">{f.m2 > 0 ? euro(f.m2) : <span className="muted-line">—</span>}</td>
