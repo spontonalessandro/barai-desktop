@@ -350,7 +350,7 @@ export default function FoodCostPage({ data, onSaveRecipe, onDeleteRecipe }) {
         </div>
       )}
 
-      {tab === 'ricette' && <div className="card toolbar food-toolbar">
+      {tab === 'ricette' && <><div className="card toolbar food-toolbar">
         <label>Cerca
           <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Ricetta o categoria..." />
         </label>
@@ -405,7 +405,7 @@ export default function FoodCostPage({ data, onSaveRecipe, onDeleteRecipe }) {
         </table>
       </div>
 
-      }
+      </>}
 
       {modalData && <RecipeModal data={modalData} onClose={() => setModalData(null)} onSave={onSaveRecipe} />}
     </section>
