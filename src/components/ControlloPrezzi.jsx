@@ -561,12 +561,12 @@ export default function ControlloPrezzi({ data, onMap, onMapMany, onSaveProduct 
   }, [righe, query, categoria, fornitore]);
 
   const analisiForni = useMemo(() => {
-    const meseCorrente = new Date().toISOString().slice(0, 7);
-    const mesePrecedente = (() => {
+    const shiftMese = (delta) => {
       const d = new Date();
-      d.setMonth(d.getMonth() - 1);
+      d.setMonth(d.getMonth() + delta);
       return d.toISOString().slice(0, 7);
-    })();
+    };
+    const mesi3 = [shiftMese(-2), shiftMese(-1), shiftMese(0)]; // [m-2, m-1, corrente]
     const map = new Map();
     for (const r of righe) {
       const nome = r.fornitore_nome || 'Sconosciuto';
@@ -574,24 +574,28 @@ export default function ControlloPrezzi({ data, onMap, onMapMany, onSaveProduct 
       const mese = (r.data_fattura || '').slice(0, 7);
       const prodId = r.prodotto_id || '';
       const fatId = r.fattura_id || '';
-      if (!map.has(nome)) map.set(nome, { nome, totale: 0, corrente: 0, precedente: 0, prodotti: new Set(), fatture: new Set(), dataUltimo: '' });
+      if (!map.has(nome)) map.set(nome, { nome, totaleStorico: 0, m0: 0, m1: 0, m2: 0, prodotti: new Set(), fatture: new Set(), dataUltimo: '' });
       const f = map.get(nome);
-      f.totale += totale;
-      if (mese === meseCorrente) f.corrente += totale;
-      if (mese === mesePrecedente) f.precedente += totale;
+      f.totaleStorico += totale;
+      if (mese === mesi3[0]) f.m0 += totale;
+      if (mese === mesi3[1]) f.m1 += totale;
+      if (mese === mesi3[2]) f.m2 += totale;
       if (prodId) f.prodotti.add(prodId);
       if (fatId) f.fatture.add(fatId);
       if (!f.dataUltimo || mese > f.dataUltimo) f.dataUltimo = mese;
     }
-    return Array.from(map.values())
-      .map((f) => ({
-        ...f,
-        prodotti: f.prodotti.size,
-        fatture: f.fatture.size,
-        delta: f.precedente > 0 ? ((f.corrente - f.precedente) / f.precedente) * 100 : null
-      }))
-      .filter((f) => !query || f.nome.toLowerCase().includes(query.toLowerCase()))
-      .sort((a, b) => b.totale - a.totale);
+    return {
+      mesi3,
+      righe: Array.from(map.values())
+        .map((f) => ({
+          ...f,
+          prodotti: f.prodotti.size,
+          fatture: f.fatture.size,
+          delta: f.m1 > 0 ? ((f.m2 - f.m1) / f.m1) * 100 : null
+        }))
+        .filter((f) => !query || f.nome.toLowerCase().includes(query.toLowerCase()))
+        .sort((a, b) => b.totaleStorico - a.totaleStorico)
+    };
   }, [righe, query]);
 
   function toggleSelect(key) {
@@ -861,25 +865,26 @@ export default function ControlloPrezzi({ data, onMap, onMapMany, onSaveProduct 
             <thead>
               <tr>
                 <th>Fornitore</th>
-                <th className="right">Spesa totale</th>
-                <th className="right">Mese corrente</th>
-                <th className="right">Mese prec.</th>
-                <th className="right">Δ mese</th>
+                <th className="right">Storico totale</th>
+                <th className="right">{analisiForni.mesi3[0]}</th>
+                <th className="right">{analisiForni.mesi3[1]}</th>
+                <th className="right">{analisiForni.mesi3[2]}</th>
+                <th className="right">Δ (m-1→m)</th>
                 <th className="right">Prodotti</th>
                 <th className="right">Fatture</th>
-                <th>Ultimo acquisto</th>
               </tr>
             </thead>
             <tbody>
-              {analisiForni.map((f) => {
+              {analisiForni.righe.map((f) => {
                 const deltaPos = f.delta !== null && f.delta > 5;
                 const deltaNeg = f.delta !== null && f.delta < -5;
                 return (
                   <tr key={f.nome}>
-                    <td><strong>{f.nome}</strong></td>
-                    <td className="right"><strong>{euro(f.totale)}</strong></td>
-                    <td className="right">{f.corrente > 0 ? euro(f.corrente) : <span className="muted-line">—</span>}</td>
-                    <td className="right">{f.precedente > 0 ? euro(f.precedente) : <span className="muted-line">—</span>}</td>
+                    <td><strong>{f.nome}</strong><br /><span className="muted-line">{f.dataUltimo || '-'}</span></td>
+                    <td className="right"><strong>{euro(f.totaleStorico)}</strong></td>
+                    <td className="right">{f.m0 > 0 ? euro(f.m0) : <span className="muted-line">—</span>}</td>
+                    <td className="right">{f.m1 > 0 ? euro(f.m1) : <span className="muted-line">—</span>}</td>
+                    <td className="right">{f.m2 > 0 ? euro(f.m2) : <span className="muted-line">—</span>}</td>
                     <td className="right">
                       {f.delta !== null
                         ? <span className={`delta-badge ${deltaPos ? 'delta-up' : deltaNeg ? 'delta-down' : 'delta-flat'}`}>{f.delta >= 0 ? '+' : ''}{f.delta.toFixed(1)}%</span>
@@ -887,11 +892,10 @@ export default function ControlloPrezzi({ data, onMap, onMapMany, onSaveProduct 
                     </td>
                     <td className="right">{f.prodotti}</td>
                     <td className="right">{f.fatture}</td>
-                    <td>{f.dataUltimo || '-'}</td>
                   </tr>
                 );
               })}
-              {analisiForni.length === 0 && <tr><td colSpan="8" className="empty-cell">Nessun dato fornitore disponibile.</td></tr>}
+              {analisiForni.righe.length === 0 && <tr><td colSpan="8" className="empty-cell">Nessun dato fornitore disponibile.</td></tr>}
             </tbody>
           </table>
         )}
