@@ -103,7 +103,10 @@ function FatturaForm({ fattura, fornitori, regole, onCancel, onSave }) {
         </label>
         <label>
           Metodo pagamento
-          <input value={form.metodo_pagamento} onChange={(e) => update('metodo_pagamento', e.target.value)} placeholder="Bonifico, RID, contanti..." />
+          <select value={form.metodo_pagamento} onChange={(e) => update('metodo_pagamento', e.target.value)}>
+            <option value="">— nessuno —</option>
+            {PAYMENT_METHODS.map((m) => <option key={m} value={m}>{m}</option>)}
+          </select>
         </label>
         <label className="span-2">
           Note
@@ -151,7 +154,10 @@ function FornitoreForm({ fornitore, regole, onCancel, onSave }) {
         </label>
         <label>
           Metodo default
-          <input value={form.metodo_pagamento_default} onChange={(e) => update('metodo_pagamento_default', e.target.value)} />
+          <select value={form.metodo_pagamento_default} onChange={(e) => update('metodo_pagamento_default', e.target.value)}>
+            <option value="">— nessuno —</option>
+            {PAYMENT_METHODS.map((m) => <option key={m} value={m}>{m}</option>)}
+          </select>
         </label>
         <label>
           Regola default
@@ -208,7 +214,10 @@ function RegolaForm({ regola, onCancel, onSave }) {
         </label>
         <label>
           Metodo pagamento
-          <input value={form.metodo_pagamento} onChange={(e) => update('metodo_pagamento', e.target.value)} placeholder="Bonifico, RID, RIBA..." />
+          <select value={form.metodo_pagamento} onChange={(e) => update('metodo_pagamento', e.target.value)}>
+            <option value="">— nessuno —</option>
+            {PAYMENT_METHODS.map((m) => <option key={m} value={m}>{m}</option>)}
+          </select>
         </label>
         <label>
           Giorni
