@@ -294,13 +294,15 @@ function PaymentModal({ request, scadenze, onCancel, onConfirm }) {
   );
 }
 
-export default function ScadenziarioPage({ data, onPaid, onPaidMany, onSetStatus, onSetStatusMany, onReopen, onSaveFattura, onSaveFornitore, onSaveRegola }) {
+export default function ScadenziarioPage({ data, fattureVendita = [], onPaid, onPaidMany, onSetStatus, onSetStatusMany, onReopen, onSaveFattura, onSaveFornitore, onSaveRegola }) {
   const [subtab, setSubtab] = useState('scadenze');
   const [form, setForm] = useState(null);
   const [selected, setSelected] = useState([]);
   const [paymentDate, setPaymentDate] = useState(todayISO());
   const [paymentRequest, setPaymentRequest] = useState(null);
   const [filters, setFilters] = useState({ stato: 'APERTO', mese: 'TUTTI', fornitore: 'TUTTI', search: '' });
+  const [fattureFilters, setFattureFilters] = useState({ fornitore: '', mese: '', stato: '', search: '' });
+  const [venditeFilters, setVenditeFilters] = useState({ mese: '', stato: '', search: '' });
 
   const scadenze = data.scadenze || [];
   const fatture = data.fatture || [];
@@ -325,6 +327,30 @@ export default function ScadenziarioPage({ data, onPaid, onPaidMany, onSetStatus
       return statoOk && meseOk && fornitoreOk && textOk;
     });
   }, [scadenze, filters]);
+
+  const fattureMesi = useMemo(() => Array.from(new Set(fatture.map((f) => monthKey(f.data_fattura)).filter(Boolean))).sort().reverse(), [fatture]);
+  const venditeM = useMemo(() => Array.from(new Set(fattureVendita.map((f) => monthKey(f.data_fattura)).filter(Boolean))).sort().reverse(), [fattureVendita]);
+
+  const filteredFatture = useMemo(() => {
+    const q = fattureFilters.search.trim().toLowerCase();
+    return fatture.filter((f) => {
+      if (fattureFilters.fornitore && f.fornitore_nome !== fattureFilters.fornitore) return false;
+      if (fattureFilters.mese && monthKey(f.data_fattura) !== fattureFilters.mese) return false;
+      if (fattureFilters.stato && f.stato_scadenza !== fattureFilters.stato) return false;
+      if (q && ![f.fornitore_nome, f.numero, f.origine_import].some((v) => String(v || '').toLowerCase().includes(q))) return false;
+      return true;
+    });
+  }, [fatture, fattureFilters]);
+
+  const filteredVendite = useMemo(() => {
+    const q = venditeFilters.search.trim().toLowerCase();
+    return fattureVendita.filter((f) => {
+      if (venditeFilters.mese && monthKey(f.data_fattura) !== venditeFilters.mese) return false;
+      if (venditeFilters.stato && f.stato !== venditeFilters.stato) return false;
+      if (q && ![f.cliente_nome, f.numero, f.origine_import].some((v) => String(v || '').toLowerCase().includes(q))) return false;
+      return true;
+    });
+  }, [fattureVendita, venditeFilters]);
 
   const summary = useMemo(() => {
     const open = scadenze.filter((s) => s.stato === 'APERTO');
@@ -412,7 +438,8 @@ export default function ScadenziarioPage({ data, onPaid, onPaidMany, onSetStatus
       <div className="subnav">
         {[
           ['scadenze', 'Scadenze'],
-          ['fatture', 'Fatture'],
+          ['fatture', 'Fatture acquisto'],
+          ['vendite', 'Fatture vendita'],
           ['fornitori', 'Fornitori'],
           ['regole', 'Regole'],
           ['pagamenti', 'Pagamenti'],
@@ -500,11 +527,27 @@ export default function ScadenziarioPage({ data, onPaid, onPaidMany, onSetStatus
 
       {subtab === 'fatture' && (
         <div className="card table-card">
-          <div className="card-header-row"><div><h2>Fatture acquisto</h2><p>Inserimento manuale e import XML SDI. La data pagamento viene salvata sulla fattura e sulla scadenza.</p></div></div>
+          <div className="toolbar">
+            <input placeholder="Cerca fornitore, numero..." value={fattureFilters.search} onChange={(e) => setFattureFilters((p) => ({ ...p, search: e.target.value }))} />
+            <select value={fattureFilters.fornitore} onChange={(e) => setFattureFilters((p) => ({ ...p, fornitore: e.target.value }))}>
+              <option value="">Tutti i fornitori</option>
+              {fornitori.map((f) => <option key={f.id} value={f.ragione_sociale}>{f.ragione_sociale}</option>)}
+            </select>
+            <select value={fattureFilters.mese} onChange={(e) => setFattureFilters((p) => ({ ...p, mese: e.target.value }))}>
+              <option value="">Tutti i mesi</option>
+              {fattureMesi.map((m) => <option key={m}>{m}</option>)}
+            </select>
+            <select value={fattureFilters.stato} onChange={(e) => setFattureFilters((p) => ({ ...p, stato: e.target.value }))}>
+              <option value="">Tutti gli stati</option>
+              {['APERTO', 'DA_VERIFICARE', 'PAGATO', 'PAGATO_AUTO'].map((s) => <option key={s}>{s}</option>)}
+            </select>
+            <button className="ghost-btn" onClick={() => setFattureFilters({ fornitore: '', mese: '', stato: '', search: '' })}>Pulisci</button>
+            <span className="muted-line" style={{ justifySelf: 'end' }}>{filteredFatture.length} fatture</span>
+          </div>
           <table className="compact-table fatture-table">
             <thead><tr><th className="date-col">Data</th><th className="supplier-col">Fornitore</th><th className="num-col">Numero</th><th>Imp.</th><th>IVA</th><th>Tot.</th><th className="date-col">Scad.</th><th className="date-col">Pag.</th><th>Orig.</th><th className="status-col">Stato</th><th></th></tr></thead>
             <tbody>
-              {fatture.map((f) => (
+              {filteredFatture.map((f) => (
                 <tr key={f.id}>
                   <td>{formatDate(f.data_fattura)}</td>
                   <td className="supplier-cell" title={f.fornitore_nome}>{f.fornitore_nome}</td>
@@ -519,7 +562,44 @@ export default function ScadenziarioPage({ data, onPaid, onPaidMany, onSetStatus
                   <td className="right"><button className="small-btn muted" onClick={() => setForm({ type: 'fattura', record: f })}>Modifica</button></td>
                 </tr>
               ))}
-              {fatture.length === 0 && <tr><td colSpan="11" className="empty-cell">Nessuna fattura inserita.</td></tr>}
+              {filteredFatture.length === 0 && <tr><td colSpan="11" className="empty-cell">Nessuna fattura per questi filtri.</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {subtab === 'vendite' && (
+        <div className="card table-card">
+          <div className="toolbar">
+            <input placeholder="Cerca cliente, numero..." value={venditeFilters.search} onChange={(e) => setVenditeFilters((p) => ({ ...p, search: e.target.value }))} />
+            <select value={venditeFilters.mese} onChange={(e) => setVenditeFilters((p) => ({ ...p, mese: e.target.value }))}>
+              <option value="">Tutti i mesi</option>
+              {venditeM.map((m) => <option key={m}>{m}</option>)}
+            </select>
+            <select value={venditeFilters.stato} onChange={(e) => setVenditeFilters((p) => ({ ...p, stato: e.target.value }))}>
+              <option value="">Tutti gli stati</option>
+              {['DA_INCASSARE', 'INCASSATA', 'DA_VERIFICARE'].map((s) => <option key={s}>{s}</option>)}
+            </select>
+            <button className="ghost-btn" onClick={() => setVenditeFilters({ mese: '', stato: '', search: '' })}>Pulisci</button>
+            <span className="muted-line" style={{ justifySelf: 'end' }}>{filteredVendite.length} fatture · tot. {euro(filteredVendite.reduce((a, f) => a + Number(f.totale || 0), 0))}</span>
+          </div>
+          <table className="compact-table fatture-table">
+            <thead><tr><th className="date-col">Data</th><th className="supplier-col">Cliente</th><th className="num-col">Numero</th><th>Imp.</th><th>IVA</th><th>Tot.</th><th className="date-col">Data incasso</th><th>Origine</th><th className="status-col">Stato</th></tr></thead>
+            <tbody>
+              {filteredVendite.map((f) => (
+                <tr key={f.id}>
+                  <td>{formatDate(f.data_fattura)}</td>
+                  <td className="supplier-cell">{f.cliente_nome || '-'}</td>
+                  <td>{f.numero || '-'}</td>
+                  <td>{euro(f.imponibile)}</td>
+                  <td>{euro(f.iva)}</td>
+                  <td><strong>{euro(f.totale)}</strong></td>
+                  <td>{f.data_incasso ? formatDate(f.data_incasso) : '-'}</td>
+                  <td>{f.origine_import || '-'}</td>
+                  <td><StatusBadge stato={f.stato || 'DA_VERIFICARE'} /></td>
+                </tr>
+              ))}
+              {filteredVendite.length === 0 && <tr><td colSpan="9" className="empty-cell">Nessuna fattura vendita per questi filtri. Importale dalla tab Caricamenti.</td></tr>}
             </tbody>
           </table>
         </div>

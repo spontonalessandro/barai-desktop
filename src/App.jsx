@@ -558,7 +558,7 @@ export default function App() {
       case 'dashboard':
         return <DashboardPage dashboard={dashboard} scadenze={scadenze} gestioneData={gestioneData} liquidita={primaNotaData?.totals?.saldo ?? 0} scadenzeAperte={dashboard?.totaleAperto ?? 0} />;
       case 'scadenziario':
-        return <ScadenziarioPage data={scadenziarioData} onPaid={handlePaid} onPaidMany={handlePaidMany} onSetStatus={handleSetStatus} onSetStatusMany={handleSetStatusMany} onReopen={handleReopen} onSaveFattura={handleSaveFattura} onSaveFornitore={handleSaveFornitore} onSaveRegola={handleSaveRegola} />;
+        return <ScadenziarioPage data={scadenziarioData} fattureVendita={gestioneData?.fattureVendita || []} onPaid={handlePaid} onPaidMany={handlePaidMany} onSetStatus={handleSetStatus} onSetStatusMany={handleSetStatusMany} onReopen={handleReopen} onSaveFattura={handleSaveFattura} onSaveFornitore={handleSaveFornitore} onSaveRegola={handleSaveRegola} />;
       case 'prima-nota':
         return <PrimaNotaPage data={primaNotaData} onSaveMovement={handleSavePrimaNotaMovement} onDeleteMovement={handleDeletePrimaNotaMovement} onRegenerateAutomatic={handleRegeneratePrimaNotaAutomatic} />;
       case 'caricamenti':
