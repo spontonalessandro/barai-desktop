@@ -190,7 +190,14 @@ async function initFallback() {
 
 export async function getDb() {
   if (!isTauriRuntime()) return null;
-  if (!dbPromise) dbPromise = Database.load(DB_URL);
+  if (!dbPromise) {
+    dbPromise = Database.load(DB_URL).then(async (db) => {
+      await db.execute('PRAGMA busy_timeout = 10000');
+      await db.execute('PRAGMA journal_mode = WAL');
+      await db.execute('PRAGMA synchronous = NORMAL');
+      return db;
+    });
+  }
   return dbPromise;
 }
 
@@ -2725,26 +2732,38 @@ export async function applySyncSnapshot(snapshotInput, options = {}) {
   }
 
   const summary = { inserted: 0, updated: 0, skipped: 0, rowsTotal: 0, tables: {} };
-  let transactionStarted = false;
-  try {
-    await db.execute('BEGIN');
-    transactionStarted = true;
 
-    for (const table of SYNC_TABLES) {
-      const rows = Array.isArray(snapshot.tables?.[table]) ? snapshot.tables[table] : [];
-      const tableSummary = { inserted: 0, updated: 0, skipped: 0, total: rows.length };
+  // Importa una tabella alla volta con transazione separata per evitare lock su DB nuovo
+  for (const table of SYNC_TABLES) {
+    const rows = Array.isArray(snapshot.tables?.[table]) ? snapshot.tables[table] : [];
+    const tableSummary = { inserted: 0, updated: 0, skipped: 0, total: rows.length };
+    let txStarted = false;
+    try {
+      await db.execute('BEGIN');
+      txStarted = true;
       for (const row of rows) {
         const result = await upsertSnapshotRow(db, table, row);
         tableSummary.inserted += result.inserted;
         tableSummary.updated += result.updated;
         tableSummary.skipped += result.skipped;
       }
-      summary.tables[table] = tableSummary;
-      summary.inserted += tableSummary.inserted;
-      summary.updated += tableSummary.updated;
-      summary.skipped += tableSummary.skipped;
-      summary.rowsTotal += rows.length;
+      await db.execute('COMMIT');
+      txStarted = false;
+    } catch (err) {
+      if (txStarted) { try { await db.execute('ROLLBACK'); } catch (_) {} }
+      throw new Error(`Errore import tabella ${table}: ${err?.message || err}`);
     }
+    summary.tables[table] = tableSummary;
+    summary.inserted += tableSummary.inserted;
+    summary.updated += tableSummary.updated;
+    summary.skipped += tableSummary.skipped;
+    summary.rowsTotal += rows.length;
+  }
+
+  let transactionStarted = false;
+  try {
+    await db.execute('BEGIN');
+    transactionStarted = true;
 
     await setConfigValue(db, 'sync.last_pull_at', nowIso());
     await setConfigValue(db, 'sync.last_sync_at', nowIso());
