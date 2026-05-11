@@ -192,13 +192,32 @@ export async function getDb() {
   if (!isTauriRuntime()) return null;
   if (!dbPromise) {
     dbPromise = Database.load(DB_URL).then(async (db) => {
-      await db.execute('PRAGMA busy_timeout = 10000');
       await db.execute('PRAGMA journal_mode = WAL');
       await db.execute('PRAGMA synchronous = NORMAL');
       return db;
     });
   }
   return dbPromise;
+}
+
+async function sleep(ms) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+async function withLockRetry(fn, maxRetries = 6, baseDelayMs = 300) {
+  let lastErr;
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await fn();
+    } catch (err) {
+      const msg = String(err?.message || err || '').toLowerCase();
+      const isLock = msg.includes('locked') || msg.includes('busy') || Number(err?.code) === 5 || Number(err?.code) === 517;
+      if (!isLock) throw err;
+      lastErr = err;
+      await sleep(baseDelayMs * Math.pow(2, i));
+    }
+  }
+  throw lastErr;
 }
 
 async function tableHasColumn(db, tableName, columnName) {
@@ -2733,26 +2752,34 @@ export async function applySyncSnapshot(snapshotInput, options = {}) {
 
   const summary = { inserted: 0, updated: 0, skipped: 0, rowsTotal: 0, tables: {} };
 
-  // Importa una tabella alla volta con transazione separata per evitare lock su DB nuovo
+  // Importa una tabella alla volta con retry su lock
   for (const table of SYNC_TABLES) {
     const rows = Array.isArray(snapshot.tables?.[table]) ? snapshot.tables[table] : [];
     const tableSummary = { inserted: 0, updated: 0, skipped: 0, total: rows.length };
-    let txStarted = false;
-    try {
-      await db.execute('BEGIN');
-      txStarted = true;
-      for (const row of rows) {
-        const result = await upsertSnapshotRow(db, table, row);
-        tableSummary.inserted += result.inserted;
-        tableSummary.updated += result.updated;
-        tableSummary.skipped += result.skipped;
+    if (rows.length === 0) { summary.tables[table] = tableSummary; continue; }
+
+    await withLockRetry(async () => {
+      tableSummary.inserted = 0;
+      tableSummary.updated = 0;
+      tableSummary.skipped = 0;
+      let txStarted = false;
+      try {
+        await db.execute('BEGIN IMMEDIATE');
+        txStarted = true;
+        for (const row of rows) {
+          const result = await upsertSnapshotRow(db, table, row);
+          tableSummary.inserted += result.inserted;
+          tableSummary.updated += result.updated;
+          tableSummary.skipped += result.skipped;
+        }
+        await db.execute('COMMIT');
+        txStarted = false;
+      } catch (err) {
+        if (txStarted) { try { await db.execute('ROLLBACK'); } catch (_) {} }
+        throw err;
       }
-      await db.execute('COMMIT');
-      txStarted = false;
-    } catch (err) {
-      if (txStarted) { try { await db.execute('ROLLBACK'); } catch (_) {} }
-      throw new Error(`Errore import tabella ${table}: ${err?.message || err}`);
-    }
+    });
+
     summary.tables[table] = tableSummary;
     summary.inserted += tableSummary.inserted;
     summary.updated += tableSummary.updated;
