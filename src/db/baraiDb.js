@@ -2773,37 +2773,20 @@ export async function applySyncSnapshot(snapshotInput, options = {}) {
     summary.rowsTotal += rows.length;
   }
 
-  let transactionStarted = false;
-  try {
-    await db.execute('BEGIN');
-    transactionStarted = true;
-
-    await setConfigValue(db, 'sync.last_pull_at', nowIso());
-    await setConfigValue(db, 'sync.last_sync_at', nowIso());
-    if (snapshot.cloudRevision) await setConfigValue(db, 'sync.last_cloud_revision', snapshot.cloudRevision);
-    await recordSyncSnapshot(db, {
-      direction: options.direction || 'IMPORT_LOCAL',
-      source_device_id: snapshot.sourceDeviceId || '',
-      cloud_revision: snapshot.cloudRevision || '',
-      rows_total: summary.rowsTotal,
-      status: 'OK',
-      message: `Import snapshot: ${summary.inserted} inseriti, ${summary.updated} aggiornati, ${summary.skipped} saltati`,
-      payload_hash: simpleHash(text)
-    });
-
-    await db.execute('COMMIT');
-    transactionStarted = false;
-    return summary;
-  } catch (err) {
-    if (transactionStarted) {
-      try {
-        await db.execute('ROLLBACK');
-      } catch (rollbackErr) {
-        console.error('Rollback import snapshot non riuscito', rollbackErr);
-      }
-    }
-    throw err;
-  }
+  // Auto-commit anche per i metadati finali
+  await withLockRetry(() => setConfigValue(db, 'sync.last_pull_at', nowIso()));
+  await withLockRetry(() => setConfigValue(db, 'sync.last_sync_at', nowIso()));
+  if (snapshot.cloudRevision) await withLockRetry(() => setConfigValue(db, 'sync.last_cloud_revision', snapshot.cloudRevision));
+  await withLockRetry(() => recordSyncSnapshot(db, {
+    direction: options.direction || 'IMPORT_LOCAL',
+    source_device_id: snapshot.sourceDeviceId || '',
+    cloud_revision: snapshot.cloudRevision || '',
+    rows_total: summary.rowsTotal,
+    status: 'OK',
+    message: `Import snapshot: ${summary.inserted} inseriti, ${summary.updated} aggiornati, ${summary.skipped} saltati`,
+    payload_hash: simpleHash(text)
+  }));
+  return summary;
 }
 
 export async function listLocalDbBackups() {

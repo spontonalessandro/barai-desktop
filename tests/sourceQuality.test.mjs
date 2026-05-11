@@ -19,9 +19,8 @@ const pkg = readFileSync('package.json', 'utf8');
 const xlsxParser = readFileSync('src/utils/corrispettiviXlsxParser.js', 'utf8');
 
 assert.equal(db.includes('AppsScript_Sync_v7_5_2.gs'), false, 'I messaggi runtime non devono puntare allo script v7.5.2');
-assert.ok(db.includes("await db.execute('BEGIN')"), 'applySyncSnapshot deve aprire una transazione');
-assert.ok(db.includes("await db.execute('COMMIT')"), 'applySyncSnapshot deve chiudere la transazione con COMMIT');
-assert.ok(db.includes("await db.execute('ROLLBACK')"), 'applySyncSnapshot deve fare ROLLBACK in caso di errore');
+assert.ok(db.includes('withLockRetry'), 'applySyncSnapshot deve usare withLockRetry per gestire i lock SQLite');
+assert.ok(db.includes('upsertSnapshotRow'), 'applySyncSnapshot deve importare le righe tramite upsertSnapshotRow');
 assert.ok(primaNota.includes('function freshForm()'), 'Prima Nota deve rigenerare la data default a ogni nuovo movimento');
 assert.ok(primaNota.includes('useState(() => freshForm())'), 'Prima Nota deve inizializzare il form con factory fresca');
 assert.ok(foodCost.includes('confirmDeleteRecipe'), 'Food Cost deve chiedere conferma prima di eliminare una ricetta');
