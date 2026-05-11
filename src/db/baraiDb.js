@@ -2758,28 +2758,13 @@ export async function applySyncSnapshot(snapshotInput, options = {}) {
     const tableSummary = { inserted: 0, updated: 0, skipped: 0, total: rows.length };
     if (rows.length === 0) { summary.tables[table] = tableSummary; continue; }
 
-    await withLockRetry(async () => {
-      tableSummary.inserted = 0;
-      tableSummary.updated = 0;
-      tableSummary.skipped = 0;
-      let txStarted = false;
-      try {
-        await db.execute('PRAGMA busy_timeout = 30000');
-        await db.execute('BEGIN IMMEDIATE');
-        txStarted = true;
-        for (const row of rows) {
-          const result = await upsertSnapshotRow(db, table, row);
-          tableSummary.inserted += result.inserted;
-          tableSummary.updated += result.updated;
-          tableSummary.skipped += result.skipped;
-        }
-        await db.execute('COMMIT');
-        txStarted = false;
-      } catch (err) {
-        if (txStarted) { try { await db.execute('ROLLBACK'); } catch (_) {} }
-        throw err;
-      }
-    });
+    // Auto-commit per riga con retry su lock — evita conflitti di transazione su DB nuovo
+    for (const row of rows) {
+      const result = await withLockRetry(() => upsertSnapshotRow(db, table, row));
+      tableSummary.inserted += result.inserted;
+      tableSummary.updated += result.updated;
+      tableSummary.skipped += result.skipped;
+    }
 
     summary.tables[table] = tableSummary;
     summary.inserted += tableSummary.inserted;
