@@ -2764,6 +2764,7 @@ export async function applySyncSnapshot(snapshotInput, options = {}) {
       tableSummary.skipped = 0;
       let txStarted = false;
       try {
+        await db.execute('PRAGMA busy_timeout = 30000');
         await db.execute('BEGIN IMMEDIATE');
         txStarted = true;
         for (const row of rows) {
@@ -3106,6 +3107,10 @@ export async function explodeCloudSnapshotToSheets() {
 
 export async function pullSyncSnapshotFromCloud() {
   const db = await getDb();
+  // Piccolo delay per assicurarsi che l'init DB sia completamente rilasciato
+  await sleep(500);
+  await db.execute('PRAGMA busy_timeout = 30000');
+  await db.execute('PRAGMA wal_checkpoint(PASSIVE)');
   let data;
   try {
     data = await callSyncCloud('pullSnapshot');
