@@ -1,0 +1,86 @@
+name: Release BarAI Desktop
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: macos-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+
+      - name: Cache Rust
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build universal app
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: npm run tauri:build -- --target universal-apple-darwin
+
+      - name: Prepare release files
+        run: |
+          VERSION=${GITHUB_REF_NAME#v}
+          DMG="src-tauri/target/universal-apple-darwin/release/bundle/dmg/BarAI Desktop_${VERSION}_universal.dmg"
+          APP_TAR="src-tauri/target/universal-apple-darwin/release/bundle/macos/BarAI Desktop.app.tar.gz"
+
+          # Crea il tar.gz dell'app per l'updater
+          cd "src-tauri/target/universal-apple-darwin/release/bundle/macos"
+          tar -czf "BarAI Desktop.app.tar.gz" "BarAI Desktop.app"
+          cd -
+
+          # Leggi la firma
+          SIG=$(cat "${APP_TAR}.sig" 2>/dev/null || cat "src-tauri/target/universal-apple-darwin/release/bundle/macos/BarAI Desktop.app.tar.gz.sig" 2>/dev/null || echo "")
+
+          # Crea latest.json per updater
+          cat > latest.json << EOF
+          {
+            "version": "v${VERSION}",
+            "notes": "Aggiornamento BarAI Desktop v${VERSION}",
+            "pub_date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "platforms": {
+              "darwin-aarch64": {
+                "signature": "${SIG}",
+                "url": "https://github.com/${{ github.repository }}/releases/download/${GITHUB_REF_NAME}/BarAI.Desktop_${VERSION}_universal.app.tar.gz"
+              },
+              "darwin-x86_64": {
+                "signature": "${SIG}",
+                "url": "https://github.com/${{ github.repository }}/releases/download/${GITHUB_REF_NAME}/BarAI.Desktop_${VERSION}_universal.app.tar.gz"
+              }
+            }
+          }
+          EOF
+
+          echo "VERSION=${VERSION}" >> $GITHUB_ENV
+          echo "DMG_PATH=${DMG}" >> $GITHUB_ENV
+          echo "APP_TAR_PATH=src-tauri/target/universal-apple-darwin/release/bundle/macos/BarAI Desktop.app.tar.gz" >> $GITHUB_ENV
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ${{ env.DMG_PATH }}
+            ${{ env.APP_TAR_PATH }}
+            latest.json
+          generate_release_notes: true

@@ -159,6 +159,28 @@ export default function App() {
       });
   }, [reload, reportError]);
 
+  // Check aggiornamenti automatici all'avvio
+  useEffect(() => {
+    if (!ready || dbMode !== 'tauri-sqlite') return;
+    (async () => {
+      try {
+        const { check } = await import('@tauri-apps/plugin-updater');
+        const update = await check();
+        if (update?.available) {
+          const ok = window.confirm(
+            `Aggiornamento disponibile: v${update.version}\n\n${update.body || ''}\n\nVuoi installarlo ora? L'app verrà riavviata.`
+          );
+          if (ok) {
+            flash('Download aggiornamento in corso...', 'info');
+            await update.downloadAndInstall();
+          }
+        }
+      } catch (_) {
+        // Aggiornamento non critico — ignora errori silenziosamente
+      }
+    })();
+  }, [ready, dbMode]);
+
   useEffect(() => {
     if (!ready || dbMode !== 'tauri-sqlite') return undefined;
     if (!syncData?.config?.auto_check_on_start || startupCloudCheckedRef.current) return undefined;
