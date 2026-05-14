@@ -320,8 +320,8 @@ export default function App() {
           }
 
           try {
-            flash('Sync cloud prima della chiusura...', 'info');
-            await pushSyncSnapshotToCloudAndExplode();
+            flash('Push cloud prima della chiusura...', 'info');
+            await pushSyncSnapshotToCloud();
             await reload();
             await appWindow.destroy();
           } catch (err) {
@@ -616,8 +616,8 @@ export default function App() {
   async function syncAndClose() {
     try {
       setClosePrompt((prev) => ({ ...prev, working: true, error: '' }));
-      flash('Sync cloud prima della chiusura...', 'info');
-      await pushSyncSnapshotToCloudAndExplode();
+      flash('Push cloud prima della chiusura...', 'info');
+      await pushSyncSnapshotToCloud();
       await reload();
       await destroyAppWindow();
     } catch (err) {
