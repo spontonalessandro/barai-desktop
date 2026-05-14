@@ -1254,6 +1254,87 @@ table.compact-table .status-col { width: 104px; }
   body { background: #fff; }
 }
 
+/* v9.3 - Ordine fornitore */
+.ordine-filters {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  padding: 16px;
+}
+.ordine-filters label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 950;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--muted);
+}
+.ordine-filters select,
+.ordine-filters input {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 8px 10px;
+  background: rgba(255,255,255,.85);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 750;
+  min-width: 160px;
+}
+.ordine-filters .check-label {
+  flex-direction: row !important;
+  align-items: center;
+  gap: 8px;
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+  font-size: 13px !important;
+}
+.ordine-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 20px;
+  background: rgba(36,107,79,.08);
+  border: 1px solid rgba(36,107,79,.25);
+}
+.ordine-summary span { color: var(--muted); font-weight: 850; }
+.ordine-summary strong { font-size: 20px; color: var(--green); letter-spacing: -.03em; }
+.ordine-row-active { background: rgba(36,107,79,.05); }
+.ordine-row-active td:first-child { border-left: 3px solid var(--green); }
+.ordine-qty-input {
+  width: 70px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 5px 7px;
+  text-align: right;
+  font-size: 13px;
+  font-weight: 850;
+  background: rgba(255,255,255,.9);
+}
+.ordine-qty-col { width: 110px; }
+.ordine-totale-row td { font-weight: 950; background: rgba(31,26,22,.05); border-top: 2px solid var(--ink); }
+
+/* Stampa PDF ordine */
+.print-only { display: none; }
+.ordine-print-header { display: none; }
+@media print {
+  .no-print { display: none !important; }
+  .print-only { display: block !important; }
+  .ordine-print-header {
+    display: block;
+    margin-bottom: 20px;
+  }
+  .ordine-print-header h2 { font-size: 22px; margin: 0 0 4px; }
+  .ordine-print-header p { margin: 0; color: #555; font-size: 13px; }
+  .page-section { gap: 0 !important; }
+  .card { box-shadow: none !important; border: none !important; }
+  table { font-size: 12px; }
+  th, td { padding: 7px 10px !important; }
+  .ordine-qty-input { display: none; }
+}
+
 /* v9.3 - Dashboard CE + Food Cost reale */
 .kpi-ce-verde { border: 2px solid rgba(36,107,79,.28); background: rgba(36,107,79,.07); }
 .kpi-ce-verde strong { color: var(--green); }

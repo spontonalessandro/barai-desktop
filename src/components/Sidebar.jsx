@@ -2,6 +2,7 @@ import {
   BarChart3,
   CalendarClock,
   ChefHat,
+  ClipboardList,
   Database,
   FileInput,
   Home,
@@ -17,6 +18,7 @@ const ITEMS = [
   { id: 'prima-nota', label: 'Prima Nota', icon: WalletCards },
   { id: 'caricamenti', label: 'Caricamenti', icon: FileInput },
   { id: 'prezzi', label: 'Controllo Prezzi', icon: PackageSearch },
+  { id: 'ordine', label: 'Ordini fornitore', icon: ClipboardList },
   { id: 'food-cost', label: 'Food Cost', icon: ChefHat },
   { id: 'admin', label: 'Admin / CE', icon: BarChart3 },
   { id: 'sync', label: 'Sync / Backup', icon: Database },
@@ -30,7 +32,7 @@ export default function Sidebar({ active, onChange }) {
         <div className="brand-mark">B</div>
         <div>
           <div className="brand-title">BarAI</div>
-          <div className="brand-subtitle">Desktop v9.1</div>
+          <div className="brand-subtitle">Desktop v9.3</div>
         </div>
       </div>
 

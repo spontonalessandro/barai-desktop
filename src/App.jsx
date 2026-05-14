@@ -11,6 +11,7 @@ import FoodCostPage from './pages/FoodCostPage.jsx';
 import PlaceholderPage from './pages/PlaceholderPage.jsx';
 import ConfigPage from './pages/ConfigPage.jsx';
 import GestionePage from './pages/GestionePage.jsx';
+import OrdineFornitore from './pages/OrdineFornitore.jsx';
 import {
   getDashboardData,
   importFatturaAcquistoXml,
@@ -587,6 +588,8 @@ export default function App() {
         return <CaricamentiPage data={scadenziarioData} gestioneData={gestioneData} onImportXmlAcquisto={handleImportXml} onImportXmlVendita={handleImportXmlVendita} onSaveIncasso={handleSaveIncassoCassa} onImportIncassi={handleImportIncassiCassa} onDeleteIncasso={handleDeleteIncassoCassa} onSaveBusta={handleSaveBustaPaga} onImportBuste={handleImportBustePaga} onDeleteBusta={handleDeleteBustaPaga} onSaveF24={handleSaveVersamentoF24} onImportF24={handleImportF24} onDeleteF24={handleDeleteVersamentoF24} />;
       case 'prezzi':
         return <ControlloPrezzi data={prezziData} onMap={handleSaveProdottoMapping} onMapMany={handleSaveProdottoMappingBulk} onSaveProduct={handleSaveProdotto} />;
+      case 'ordine':
+        return <OrdineFornitore righe={prezziData?.righe || []} />;
       case 'food-cost':
         return <FoodCostPage data={foodCostData} onSaveRecipe={handleSaveRicetta} onDeleteRecipe={handleDeleteRicetta} />;
       case 'admin':
