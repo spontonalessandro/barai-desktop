@@ -40,50 +40,49 @@ jobs:
         run: npm run tauri:build -- --target universal-apple-darwin
 
       - name: Prepare release files
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
           VERSION=${GITHUB_REF_NAME#v}
           BUNDLE_DIR="src-tauri/target/universal-apple-darwin/release/bundle"
+          NEW_TAR="${BUNDLE_DIR}/macos/BarAI.Desktop.app.tar.gz"
 
-          # Rinomina DMG senza spazi (trova il file con find per evitare problemi con gli spazi)
+          # Rinomina DMG senza spazi
           OLD_DMG=$(find "${BUNDLE_DIR}/dmg" -name "*.dmg" | head -1)
           NEW_DMG="${BUNDLE_DIR}/dmg/BarAI.Desktop_${VERSION}_universal.dmg"
-          echo "DMG trovato: ${OLD_DMG}"
+          echo "DMG: ${OLD_DMG} -> ${NEW_DMG}"
           mv "${OLD_DMG}" "${NEW_DMG}"
 
-          # Debug: lista tutti i file generati dal build
-          echo "=== File nel bundle dir ==="
-          find "${BUNDLE_DIR}" -type f | sort
-          echo "==========================="
+          # Crea tar.gz dal .app universale
+          echo "Creando tar.gz..."
+          cd "${BUNDLE_DIR}/macos"
+          tar -czf "BarAI.Desktop.app.tar.gz" "BarAI Desktop.app"
+          cd -
+          ls -lh "${NEW_TAR}"
 
-          # Trova il tar.gz generato da Tauri per l'updater
-          APP_TAR_FOUND=$(find "${BUNDLE_DIR}" -name "*.app.tar.gz" | head -1)
-          echo "APP_TAR trovato: [${APP_TAR_FOUND}]"
+          # Scrivi chiave privata su file temporaneo e firma
+          echo "$TAURI_SIGNING_PRIVATE_KEY" > /tmp/barai_key.key
+          echo "Firmando..."
+          npm run tauri -- signer sign \
+            -k /tmp/barai_key.key \
+            -p "$TAURI_SIGNING_PRIVATE_KEY_PASSWORD" \
+            "${NEW_TAR}"
+          rm -f /tmp/barai_key.key
 
-          # Firma: Tauri genera il .sig accanto al tar.gz
+          # Leggi firma
           SIG=""
-          SIG_FILE="${APP_TAR_FOUND}.sig"
-          echo "Cercando firma in: [${SIG_FILE}]"
-          if [ -f "${SIG_FILE}" ]; then
-            SIG=$(cat "${SIG_FILE}")
-            echo "Firma trovata: OK (${#SIG} caratteri)"
+          if [ -f "${NEW_TAR}.sig" ]; then
+            SIG=$(cat "${NEW_TAR}.sig")
+            echo "Firma OK (${#SIG} caratteri)"
           else
-            echo "ATTENZIONE: .sig non trovato, cerco ovunque..."
-            find "${BUNDLE_DIR}" -name "*.sig" 2>/dev/null | sort || true
+            echo "ERRORE: .sig non generato"
           fi
 
-          # Rinomina tar.gz senza spazi
-          NEW_TAR="${BUNDLE_DIR}/macos/BarAI.Desktop.app.tar.gz"
-          if [ -n "${APP_TAR_FOUND}" ] && [ "${APP_TAR_FOUND}" != "${NEW_TAR}" ]; then
-            cp "${APP_TAR_FOUND}" "${NEW_TAR}"
-            if [ -f "${SIG_FILE}" ]; then
-              cp "${SIG_FILE}" "${NEW_TAR}.sig"
-            fi
-          fi
-
-          # URL asset
+          # URL
           ASSET_URL="https://github.com/${{ github.repository }}/releases/download/${GITHUB_REF_NAME}/BarAI.Desktop.app.tar.gz"
 
-          # latest.json — versione SENZA "v" per confronto corretto
+          # latest.json
           cat > latest.json << EOF
           {
             "version": "${VERSION}",
@@ -96,7 +95,6 @@ jobs:
           }
           EOF
 
-          echo "--- latest.json ---"
           cat latest.json
 
           echo "DMG_PATH=${NEW_DMG}" >> $GITHUB_ENV
