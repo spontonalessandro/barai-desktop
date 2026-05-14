@@ -50,24 +50,34 @@ jobs:
           echo "DMG trovato: ${OLD_DMG}"
           mv "${OLD_DMG}" "${NEW_DMG}"
 
+          # Debug: lista tutti i file generati dal build
+          echo "=== File nel bundle dir ==="
+          find "${BUNDLE_DIR}" -type f | sort
+          echo "==========================="
+
           # Trova il tar.gz generato da Tauri per l'updater
           APP_TAR_FOUND=$(find "${BUNDLE_DIR}" -name "*.app.tar.gz" | head -1)
-          echo "APP_TAR trovato: ${APP_TAR_FOUND}"
+          echo "APP_TAR trovato: [${APP_TAR_FOUND}]"
 
           # Firma: Tauri genera il .sig accanto al tar.gz
           SIG=""
-          if [ -n "${APP_TAR_FOUND}" ] && [ -f "${APP_TAR_FOUND}.sig" ]; then
-            SIG=$(cat "${APP_TAR_FOUND}.sig")
-            echo "Firma trovata: OK"
+          SIG_FILE="${APP_TAR_FOUND}.sig"
+          echo "Cercando firma in: [${SIG_FILE}]"
+          if [ -f "${SIG_FILE}" ]; then
+            SIG=$(cat "${SIG_FILE}")
+            echo "Firma trovata: OK (${#SIG} caratteri)"
           else
-            echo "ATTENZIONE: file .sig non trovato"
-            find "${BUNDLE_DIR}" -name "*.sig" 2>/dev/null || true
+            echo "ATTENZIONE: .sig non trovato, cerco ovunque..."
+            find "${BUNDLE_DIR}" -name "*.sig" 2>/dev/null | sort || true
           fi
 
           # Rinomina tar.gz senza spazi
           NEW_TAR="${BUNDLE_DIR}/macos/BarAI.Desktop.app.tar.gz"
           if [ -n "${APP_TAR_FOUND}" ] && [ "${APP_TAR_FOUND}" != "${NEW_TAR}" ]; then
             cp "${APP_TAR_FOUND}" "${NEW_TAR}"
+            if [ -f "${SIG_FILE}" ]; then
+              cp "${SIG_FILE}" "${NEW_TAR}.sig"
+            fi
           fi
 
           # URL asset
