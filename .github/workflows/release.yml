@@ -34,67 +34,38 @@ jobs:
         run: npm ci
 
       - name: Build universal app
-        env:
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: npm run tauri:build -- --target universal-apple-darwin
 
       - name: Prepare release files
-        env:
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
           VERSION=${GITHUB_REF_NAME#v}
           BUNDLE_DIR="src-tauri/target/universal-apple-darwin/release/bundle"
-          NEW_TAR="${BUNDLE_DIR}/macos/BarAI.Desktop.app.tar.gz"
 
-          # Rinomina DMG senza spazi
+          # Rinomina DMG
           OLD_DMG=$(find "${BUNDLE_DIR}/dmg" -name "*.dmg" | head -1)
           NEW_DMG="${BUNDLE_DIR}/dmg/BarAI.Desktop_${VERSION}_universal.dmg"
-          echo "DMG: ${OLD_DMG} -> ${NEW_DMG}"
           mv "${OLD_DMG}" "${NEW_DMG}"
 
-          # Crea tar.gz dal .app universale
-          echo "Creando tar.gz..."
+          # Crea tar.gz per l'updater
+          NEW_TAR="${BUNDLE_DIR}/macos/BarAI.Desktop.app.tar.gz"
           cd "${BUNDLE_DIR}/macos"
           tar -czf "BarAI.Desktop.app.tar.gz" "BarAI Desktop.app"
           cd -
           ls -lh "${NEW_TAR}"
 
-          # Scrivi chiave privata su file temporaneo e firma
-          echo "$TAURI_SIGNING_PRIVATE_KEY" > /tmp/barai_key.key
-          echo "Firmando..."
-          npm run tauri -- signer sign \
-            -k /tmp/barai_key.key \
-            -p "$TAURI_SIGNING_PRIVATE_KEY_PASSWORD" \
-            "${NEW_TAR}"
-          rm -f /tmp/barai_key.key
-
-          # Leggi firma
-          SIG=""
-          if [ -f "${NEW_TAR}.sig" ]; then
-            SIG=$(cat "${NEW_TAR}.sig")
-            echo "Firma OK (${#SIG} caratteri)"
-          else
-            echo "ERRORE: .sig non generato"
-          fi
-
-          # URL
+          # latest.json senza firma (pubkey vuota in tauri.conf.json)
           ASSET_URL="https://github.com/${{ github.repository }}/releases/download/${GITHUB_REF_NAME}/BarAI.Desktop.app.tar.gz"
-
-          # latest.json
           cat > latest.json << EOF
           {
             "version": "${VERSION}",
             "notes": "Aggiornamento BarAI Desktop v${VERSION}",
             "pub_date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
             "platforms": {
-              "darwin-aarch64": { "signature": "${SIG}", "url": "${ASSET_URL}" },
-              "darwin-x86_64":  { "signature": "${SIG}", "url": "${ASSET_URL}" }
+              "darwin-aarch64": { "signature": "", "url": "${ASSET_URL}" },
+              "darwin-x86_64":  { "signature": "", "url": "${ASSET_URL}" }
             }
           }
           EOF
-
           cat latest.json
 
           echo "DMG_PATH=${NEW_DMG}" >> $GITHUB_ENV
