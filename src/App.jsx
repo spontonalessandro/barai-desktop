@@ -12,6 +12,8 @@ import PlaceholderPage from './pages/PlaceholderPage.jsx';
 import ConfigPage from './pages/ConfigPage.jsx';
 import GestionePage from './pages/GestionePage.jsx';
 import OrdineFornitore from './pages/OrdineFornitore.jsx';
+import SetupDevice from './components/SetupDevice.jsx';
+import PinModal from './components/PinModal.jsx';
 import {
   getDashboardData,
   importFatturaAcquistoXml,
@@ -64,7 +66,9 @@ import {
   deleteBustaPaga,
   saveVersamentoF24,
   importF24Json,
-  deleteVersamentoF24
+  deleteVersamentoF24,
+  getDeviceMode,
+  setDeviceMode
 } from './db/index.js';
 import { writeErrorLog } from './utils/errorLog.js';
 
@@ -87,9 +91,14 @@ const EMPTY_SYNC = {
 const PLACEHOLDER_PAGES = {};
 
 export default function App() {
-  const [active, setActive] = useState('dashboard');
+  const [active, setActive] = useState('prezzi');
   const [ready, setReady] = useState(false);
   const [dbMode, setDbMode] = useState('loading');
+  const [deviceMode, setDeviceModeState] = useState(null); // null=non ancora letto, 'admin', 'dipendente'
+  const [devicePin, setDevicePin] = useState('');
+  const [showSetup, setShowSetup] = useState(false);
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [adminSessionActive, setAdminSessionActive] = useState(false); // unlock temporaneo
   const [dashboard, setDashboard] = useState(null);
   const [scadenze, setScadenze] = useState([]);
   const [scadenziarioData, setScadenziarioData] = useState(EMPTY_SCADENZIARIO);
@@ -159,6 +168,51 @@ export default function App() {
         setReady(true);
       });
   }, [reload, reportError]);
+
+  // Leggi device mode dopo l'init
+  useEffect(() => {
+    if (!ready || dbMode !== 'tauri-sqlite') return;
+    getDeviceMode().then(({ mode, pin }) => {
+      if (!mode) {
+        setShowSetup(true);
+      } else {
+        setDeviceModeState(mode);
+        setDevicePin(pin);
+        if (mode === 'dipendente') setActive('prezzi');
+        else setActive('dashboard');
+      }
+    }).catch(() => {
+      setDeviceModeState('admin');
+      setActive('dashboard');
+    });
+  }, [ready, dbMode]);
+
+  async function handleSetupComplete(mode, pin) {
+    await setDeviceMode(mode, pin);
+    setDeviceModeState(mode);
+    setDevicePin(pin);
+    setShowSetup(false);
+    if (mode === 'dipendente') setActive('prezzi');
+    else setActive('dashboard');
+  }
+
+  function handleUnlockRequest() {
+    setShowPinModal(true);
+  }
+
+  function handlePinSubmit(inputPin) {
+    if (inputPin === devicePin) {
+      setAdminSessionActive(true);
+      setShowPinModal(false);
+      setActive('dashboard');
+    } else {
+      // Restituisce errore al modal — gestiamo tramite callback
+      setShowPinModal(false);
+      flash('PIN non corretto.', 'error');
+    }
+  }
+
+  const effectiveMode = adminSessionActive ? 'admin' : (deviceMode || 'admin');
 
   // Check aggiornamenti automatici all'avvio
   useEffect(() => {
@@ -605,7 +659,9 @@ export default function App() {
 
   return (
     <div className="app-shell">
-      <Sidebar active={active} onChange={setActive} />
+      {showSetup && <SetupDevice onSetup={handleSetupComplete} />}
+      {showPinModal && <PinModal onSuccess={handlePinSubmit} onCancel={() => setShowPinModal(false)} />}
+      <Sidebar active={active} onChange={setActive} deviceMode={effectiveMode} onUnlock={handleUnlockRequest} />
       <main className="main-content">
         <Toast message={notice.message} type={notice.type} />
         {renderPage()}

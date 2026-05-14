@@ -11,3 +11,4 @@ export { getSyncBackupData, saveSyncConfig, generateSyncSnapshot, applySyncSnaps
 export { listLocalDbBackups, createLocalDbBackup, createAutomaticStartupBackupIfNeeded, openLocalBackupFolder, runDatabaseDiagnostics } from './repositories/backupRepo.js';
 
 export { getGestioneData, saveIncassoCassa, importIncassiCassa, deleteIncassoCassa, saveBustaPaga, importBustePagaJson, deleteBustaPaga, saveVersamentoF24, importF24Json, deleteVersamentoF24 } from './repositories/gestioneRepo.js';
+export { getDeviceMode, setDeviceMode } from './baraiDb.js';

@@ -2564,6 +2564,21 @@ function buildBrowserSyncData() {
   };
 }
 
+export async function getDeviceMode() {
+  if (!isTauriRuntime()) return { mode: null, pin: '' };
+  const db = await getDb();
+  const mode = await getConfigValue(db, 'device.mode', '');
+  const pin = await getConfigValue(db, 'device.admin_pin', '');
+  return { mode: mode || null, pin };
+}
+
+export async function setDeviceMode(mode, pin = '') {
+  if (!isTauriRuntime()) return;
+  const db = await getDb();
+  await setConfigValue(db, 'device.mode', mode);
+  if (pin) await setConfigValue(db, 'device.admin_pin', pin);
+}
+
 export async function getSyncBackupData() {
   if (!isTauriRuntime()) return buildBrowserSyncData();
   const db = await getDb();
