@@ -217,7 +217,7 @@ export default function App() {
   // Check aggiornamenti: confronta versione con latest.json su GitHub
   useEffect(() => {
     if (!ready || dbMode !== 'tauri-sqlite') return;
-    const APP_VERSION = '0.9.9';
+    const APP_VERSION = '1.0.0';
     const LATEST_URL = 'https://github.com/spontonalessandro/barai-desktop/releases/latest/download/latest.json';
     (async () => {
       try {
