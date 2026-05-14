@@ -214,24 +214,27 @@ export default function App() {
 
   const effectiveMode = adminSessionActive ? 'admin' : (deviceMode || 'admin');
 
-  // Check aggiornamenti automatici all'avvio
+  // Check aggiornamenti: confronta versione con latest.json su GitHub
   useEffect(() => {
     if (!ready || dbMode !== 'tauri-sqlite') return;
+    const APP_VERSION = '0.9.9';
+    const LATEST_URL = 'https://github.com/spontonalessandro/barai-desktop/releases/latest/download/latest.json';
     (async () => {
       try {
-        const { check } = await import('@tauri-apps/plugin-updater');
-        const update = await check();
-        if (update?.available) {
+        const { fetch: tauriFetch } = await import('@tauri-apps/plugin-http');
+        const res = await tauriFetch(LATEST_URL, { method: 'GET' });
+        const data = await res.json();
+        const latest = data?.version || '';
+        if (latest && latest !== APP_VERSION && latest > APP_VERSION) {
           const ok = window.confirm(
-            `Aggiornamento disponibile: v${update.version}\n\n${update.body || ''}\n\nVuoi installarlo ora? L'app verrà riavviata.`
+            `Aggiornamento disponibile: v${latest}\n\nVuoi scaricare la nuova versione?\n(Si aprirà la pagina di download)`
           );
           if (ok) {
-            flash('Download aggiornamento in corso...', 'info');
-            await update.downloadAndInstall();
+            window.alert('Scarica il nuovo DMG da:\nhttps://github.com/spontonalessandro/barai-desktop/releases/latest\n\nInstallalo e sostituisci la versione attuale.');
           }
         }
       } catch (_) {
-        // Aggiornamento non critico — ignora errori silenziosamente
+        // Non critico
       }
     })();
   }, [ready, dbMode]);
