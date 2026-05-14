@@ -44,9 +44,10 @@ jobs:
           VERSION=${GITHUB_REF_NAME#v}
           BUNDLE_DIR="src-tauri/target/universal-apple-darwin/release/bundle"
 
-          # Rinomina DMG senza spazi
-          OLD_DMG="${BUNDLE_DIR}/dmg/BarAI Desktop_${VERSION}_universal.dmg"
+          # Rinomina DMG senza spazi (trova il file con find per evitare problemi con gli spazi)
+          OLD_DMG=$(find "${BUNDLE_DIR}/dmg" -name "*.dmg" | head -1)
           NEW_DMG="${BUNDLE_DIR}/dmg/BarAI.Desktop_${VERSION}_universal.dmg"
+          echo "DMG trovato: ${OLD_DMG}"
           mv "${OLD_DMG}" "${NEW_DMG}"
 
           # Trova il tar.gz generato da Tauri per l'updater
