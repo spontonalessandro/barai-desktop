@@ -49,27 +49,34 @@ jobs:
           NEW_DMG="${BUNDLE_DIR}/dmg/BarAI.Desktop_${VERSION}_universal.dmg"
           mv "${OLD_DMG}" "${NEW_DMG}"
 
-          # Crea tar.gz dell'app per l'updater (Tauri lo genera già, troviamolo)
+          # Trova il tar.gz generato da Tauri per l'updater
           APP_TAR_FOUND=$(find "${BUNDLE_DIR}" -name "*.app.tar.gz" | head -1)
-          if [ -z "$APP_TAR_FOUND" ]; then
-            cd "${BUNDLE_DIR}/macos"
-            tar -czf "BarAI.Desktop.app.tar.gz" "BarAI Desktop.app"
-            APP_TAR_FOUND="${BUNDLE_DIR}/macos/BarAI.Desktop.app.tar.gz"
-            cd -
+          echo "APP_TAR trovato: ${APP_TAR_FOUND}"
+
+          # Firma: Tauri genera il .sig accanto al tar.gz
+          SIG=""
+          if [ -n "${APP_TAR_FOUND}" ] && [ -f "${APP_TAR_FOUND}.sig" ]; then
+            SIG=$(cat "${APP_TAR_FOUND}.sig")
+            echo "Firma trovata: OK"
+          else
+            echo "ATTENZIONE: file .sig non trovato"
+            find "${BUNDLE_DIR}" -name "*.sig" 2>/dev/null || true
           fi
 
-          # Firma
-          SIG_FILE="${APP_TAR_FOUND}.sig"
-          SIG=$(cat "${SIG_FILE}" 2>/dev/null || echo "")
+          # Rinomina tar.gz senza spazi
+          NEW_TAR="${BUNDLE_DIR}/macos/BarAI.Desktop.app.tar.gz"
+          if [ -n "${APP_TAR_FOUND}" ] && [ "${APP_TAR_FOUND}" != "${NEW_TAR}" ]; then
+            cp "${APP_TAR_FOUND}" "${NEW_TAR}"
+          fi
 
           # URL asset
           ASSET_URL="https://github.com/${{ github.repository }}/releases/download/${GITHUB_REF_NAME}/BarAI.Desktop.app.tar.gz"
 
-          # latest.json
+          # latest.json — versione SENZA "v" per confronto corretto
           cat > latest.json << EOF
           {
-            "version": "${GITHUB_REF_NAME}",
-            "notes": "Aggiornamento BarAI Desktop ${GITHUB_REF_NAME}",
+            "version": "${VERSION}",
+            "notes": "Aggiornamento BarAI Desktop v${VERSION}",
             "pub_date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
             "platforms": {
               "darwin-aarch64": { "signature": "${SIG}", "url": "${ASSET_URL}" },
@@ -78,8 +85,11 @@ jobs:
           }
           EOF
 
+          echo "--- latest.json ---"
+          cat latest.json
+
           echo "DMG_PATH=${NEW_DMG}" >> $GITHUB_ENV
-          echo "APP_TAR_PATH=${APP_TAR_FOUND}" >> $GITHUB_ENV
+          echo "APP_TAR_PATH=${NEW_TAR}" >> $GITHUB_ENV
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
