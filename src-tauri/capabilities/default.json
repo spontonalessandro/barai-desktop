@@ -26,10 +26,7 @@
           "url": "https://*.googleusercontent.com/**"
         },
         {
-          "url": "https://github.com/**"
-        },
-        {
-          "url": "https://objects.githubusercontent.com/**"
+          "url": "https://raw.githubusercontent.com/**"
         }
       ]
     }

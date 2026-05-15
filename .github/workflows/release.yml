@@ -71,6 +71,18 @@ jobs:
           echo "DMG_PATH=${NEW_DMG}" >> $GITHUB_ENV
           echo "APP_TAR_PATH=${NEW_TAR}" >> $GITHUB_ENV
 
+      - name: Aggiorna latest.json nel repository
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          cp latest.json latest.json.bak
+          git fetch origin main
+          git checkout main
+          cp latest.json.bak latest.json
+          git add latest.json
+          git diff --cached --quiet || git commit -m "chore: aggiorna latest.json a ${{ github.ref_name }}"
+          git push origin main
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
