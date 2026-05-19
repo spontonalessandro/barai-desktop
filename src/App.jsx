@@ -217,10 +217,11 @@ export default function App() {
   // Check aggiornamenti: confronta versione con latest.json su GitHub
   useEffect(() => {
     if (!ready || dbMode !== 'tauri-sqlite') return;
-    const APP_VERSION = '1.0.1';
     const LATEST_URL = 'https://raw.githubusercontent.com/spontonalessandro/barai-desktop/main/latest.json';
     (async () => {
       try {
+        const { getVersion } = await import('@tauri-apps/api/app');
+        const APP_VERSION = await getVersion();
         const { fetch: tauriFetch } = await import('@tauri-apps/plugin-http');
         const res = await tauriFetch(LATEST_URL, { method: 'GET' });
         const data = await res.json();
