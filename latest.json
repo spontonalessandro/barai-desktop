@@ -1,7 +1,7 @@
 {
-  "version": "1.0.6",
-  "notes": "Test popup React",
-  "pub_date": "2026-05-25T00:00:00Z",
+  "version": "1.0.5",
+  "notes": "Aggiornamento BarAI Desktop v1.0.5",
+  "pub_date": "2026-05-25T15:35:19Z",
   "platforms": {
     "darwin-aarch64": { "signature": "", "url": "https://github.com/spontonalessandro/barai-desktop/releases/download/v1.0.5/BarAI.Desktop.app.tar.gz" },
     "darwin-x86_64":  { "signature": "", "url": "https://github.com/spontonalessandro/barai-desktop/releases/download/v1.0.5/BarAI.Desktop.app.tar.gz" }
