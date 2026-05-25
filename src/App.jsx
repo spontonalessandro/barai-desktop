@@ -219,23 +219,31 @@ export default function App() {
     if (!ready || dbMode !== 'tauri-sqlite') return;
     const LATEST_URL = 'https://raw.githubusercontent.com/spontonalessandro/barai-desktop/main/latest.json';
     (async () => {
+      let debug = 'DEBUG UPDATER:\n';
       try {
         const { getVersion } = await import('@tauri-apps/api/app');
         const APP_VERSION = await getVersion();
+        debug += `Versione installata: ${APP_VERSION}\n`;
         const { fetch: tauriFetch } = await import('@tauri-apps/plugin-http');
+        debug += `Fetch URL: ${LATEST_URL}\n`;
         const res = await tauriFetch(LATEST_URL, { method: 'GET' });
+        debug += `Status: ${res.status}\n`;
         const data = await res.json();
         const latest = data?.version || '';
+        debug += `Versione remota: ${latest}\n`;
+        debug += `Confronto: '${latest}' > '${APP_VERSION}' = ${latest > APP_VERSION}\n`;
         if (latest && latest !== APP_VERSION && latest > APP_VERSION) {
           const ok = window.confirm(
-            `Aggiornamento disponibile: v${latest}\n\nVuoi scaricare la nuova versione?\n(Si aprirà la pagina di download)`
+            `Aggiornamento disponibile: v${latest}\n\nVuoi scaricare la nuova versione?`
           );
           if (ok) {
-            window.alert('Scarica il nuovo DMG da:\nhttps://github.com/spontonalessandro/barai-desktop/releases/latest\n\nInstallalo e sostituisci la versione attuale.');
+            window.alert('Scarica da:\nhttps://github.com/spontonalessandro/barai-desktop/releases/latest');
           }
+        } else {
+          window.alert(debug + '\nNessun aggiornamento necessario.');
         }
-      } catch (_) {
-        // Non critico
+      } catch (err) {
+        window.alert(debug + `\nERRORE: ${err?.message || String(err)}`);
       }
     })();
   }, [ready, dbMode]);
