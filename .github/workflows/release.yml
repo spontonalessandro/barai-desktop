@@ -75,10 +75,11 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          cp latest.json latest.json.bak
+          cp latest.json /tmp/latest.json.new
           git fetch origin main
-          git checkout main
-          cp latest.json.bak latest.json
+          git checkout -f main
+          git reset --hard origin/main
+          cp /tmp/latest.json.new latest.json
           git add latest.json
           git diff --cached --quiet || git commit -m "chore: aggiorna latest.json a ${{ github.ref_name }}"
           git push origin main
