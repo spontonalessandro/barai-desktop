@@ -99,6 +99,7 @@ export default function App() {
   const [showSetup, setShowSetup] = useState(false);
   const [showPinModal, setShowPinModal] = useState(false);
   const [adminSessionActive, setAdminSessionActive] = useState(false); // unlock temporaneo
+  const [updateInfo, setUpdateInfo] = useState(null); // { version, currentVersion }
   const [dashboard, setDashboard] = useState(null);
   const [scadenze, setScadenze] = useState([]);
   const [scadenziarioData, setScadenziarioData] = useState(EMPTY_SCADENZIARIO);
@@ -219,31 +220,18 @@ export default function App() {
     if (!ready || dbMode !== 'tauri-sqlite') return;
     const LATEST_URL = 'https://raw.githubusercontent.com/spontonalessandro/barai-desktop/main/latest.json';
     (async () => {
-      let debug = 'DEBUG UPDATER:\n';
       try {
         const { getVersion } = await import('@tauri-apps/api/app');
         const APP_VERSION = await getVersion();
-        debug += `Versione installata: ${APP_VERSION}\n`;
         const { fetch: tauriFetch } = await import('@tauri-apps/plugin-http');
-        debug += `Fetch URL: ${LATEST_URL}\n`;
         const res = await tauriFetch(LATEST_URL, { method: 'GET' });
-        debug += `Status: ${res.status}\n`;
         const data = await res.json();
         const latest = data?.version || '';
-        debug += `Versione remota: ${latest}\n`;
-        debug += `Confronto: '${latest}' > '${APP_VERSION}' = ${latest > APP_VERSION}\n`;
         if (latest && latest !== APP_VERSION && latest > APP_VERSION) {
-          const ok = window.confirm(
-            `Aggiornamento disponibile: v${latest}\n\nVuoi scaricare la nuova versione?`
-          );
-          if (ok) {
-            window.alert('Scarica da:\nhttps://github.com/spontonalessandro/barai-desktop/releases/latest');
-          }
-        } else {
-          window.alert(debug + '\nNessun aggiornamento necessario.');
+          setUpdateInfo({ version: latest, currentVersion: APP_VERSION });
         }
       } catch (err) {
-        window.alert(debug + `\nERRORE: ${err?.message || String(err)}`);
+        flash(`Check aggiornamento fallito: ${err?.message || String(err)}`, 'error');
       }
     })();
   }, [ready, dbMode]);
@@ -678,6 +666,34 @@ export default function App() {
         <Toast message={notice.message} type={notice.type} />
         {renderPage()}
       </main>
+      {updateInfo && (
+        <div className="modal-backdrop">
+          <div className="modal-card" style={{ maxWidth: 460 }}>
+            <div className="modal-header">
+              <div>
+                <p className="eyebrow">Aggiornamento disponibile</p>
+                <h2>BarAI v{updateInfo.version}</h2>
+              </div>
+              <button className="icon-btn" onClick={() => setUpdateInfo(null)}>×</button>
+            </div>
+            <p>È disponibile una nuova versione. Versione attuale: v{updateInfo.currentVersion}.</p>
+            <p style={{ marginTop: 8, fontSize: 13, color: 'var(--muted)' }}>Scarica il nuovo DMG da GitHub e installa sopra la versione attuale.</p>
+            <div className="form-actions" style={{ marginTop: 18 }}>
+              <button className="ghost-btn" onClick={() => setUpdateInfo(null)}>Più tardi</button>
+              <button className="primary-btn" onClick={async () => {
+                try {
+                  const { openUrl } = await import('@tauri-apps/plugin-opener').catch(() => ({ openUrl: null }));
+                  if (openUrl) await openUrl('https://github.com/spontonalessandro/barai-desktop/releases/latest');
+                  else flash('Vai a: github.com/spontonalessandro/barai-desktop/releases/latest', 'info');
+                } catch (_) {
+                  flash('Vai a: github.com/spontonalessandro/barai-desktop/releases/latest', 'info');
+                }
+                setUpdateInfo(null);
+              }}>Scarica aggiornamento</button>
+            </div>
+          </div>
+        </div>
+      )}
       {bulkErrorReport && (
         <div className="modal-backdrop">
           <div className="modal-card" style={{ maxWidth: 560 }}>
