@@ -218,15 +218,20 @@ export default function App() {
   // Check aggiornamenti: confronta versione con latest.json su GitHub
   useEffect(() => {
     if (!ready || dbMode !== 'tauri-sqlite') return;
+    flash('Check aggiornamenti...', 'info');
     const LATEST_URL = 'https://raw.githubusercontent.com/spontonalessandro/barai-desktop/main/latest.json';
     (async () => {
       try {
         const { getVersion } = await import('@tauri-apps/api/app');
         const APP_VERSION = await getVersion();
+        flash(`Versione: ${APP_VERSION} — controllo cloud...`, 'info');
         const { fetch: tauriFetch } = await import('@tauri-apps/plugin-http');
         const res = await tauriFetch(LATEST_URL, { method: 'GET' });
-        const data = await res.json();
+        const text = await res.text();
+        flash(`Status: ${res.status} — risposta lunga ${text.length}`, 'info');
+        const data = JSON.parse(text);
         const latest = data?.version || '';
+        flash(`Locale ${APP_VERSION} vs remota ${latest}`, 'info');
         if (latest && latest !== APP_VERSION && latest > APP_VERSION) {
           setUpdateInfo({ version: latest, currentVersion: APP_VERSION });
         }
