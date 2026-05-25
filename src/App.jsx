@@ -680,16 +680,10 @@ export default function App() {
             <p style={{ marginTop: 8, fontSize: 13, color: 'var(--muted)' }}>Scarica il nuovo DMG da GitHub e installa sopra la versione attuale.</p>
             <div className="form-actions" style={{ marginTop: 18 }}>
               <button className="ghost-btn" onClick={() => setUpdateInfo(null)}>Più tardi</button>
-              <button className="primary-btn" onClick={async () => {
-                try {
-                  const { openUrl } = await import('@tauri-apps/plugin-opener').catch(() => ({ openUrl: null }));
-                  if (openUrl) await openUrl('https://github.com/spontonalessandro/barai-desktop/releases/latest');
-                  else flash('Vai a: github.com/spontonalessandro/barai-desktop/releases/latest', 'info');
-                } catch (_) {
-                  flash('Vai a: github.com/spontonalessandro/barai-desktop/releases/latest', 'info');
-                }
+              <button className="primary-btn" onClick={() => {
+                flash('Vai a github.com/spontonalessandro/barai-desktop/releases/latest e scarica il DMG', 'info');
                 setUpdateInfo(null);
-              }}>Scarica aggiornamento</button>
+              }}>Mostra link download</button>
             </div>
           </div>
         </div>
