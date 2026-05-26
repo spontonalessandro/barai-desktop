@@ -1,7 +1,7 @@
 {
-  "version": "1.0.7",
-  "notes": "Aggiornamento BarAI Desktop v1.0.7",
-  "pub_date": "2026-05-25T15:50:40Z",
+  "version": "1.0.8",
+  "notes": "Test toast debug",
+  "pub_date": "2026-05-26T00:00:00Z",
   "platforms": {
     "darwin-aarch64": { "signature": "", "url": "https://github.com/spontonalessandro/barai-desktop/releases/download/v1.0.7/BarAI.Desktop.app.tar.gz" },
     "darwin-x86_64":  { "signature": "", "url": "https://github.com/spontonalessandro/barai-desktop/releases/download/v1.0.7/BarAI.Desktop.app.tar.gz" }
