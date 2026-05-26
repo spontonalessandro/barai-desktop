@@ -1,9 +1,9 @@
 {
-  "version": "1.1.0",
-  "notes": "Aggiornamento BarAI Desktop v1.1.0",
-  "pub_date": "2026-05-26T13:54:13Z",
+  "version": "1.1.1",
+  "notes": "Aggiornamento BarAI Desktop v1.1.1",
+  "pub_date": "2026-05-26T14:05:02Z",
   "platforms": {
-    "darwin-aarch64": { "signature": "", "url": "https://github.com/spontonalessandro/barai-desktop/releases/download/v1.1.0/BarAI.Desktop.app.tar.gz" },
-    "darwin-x86_64":  { "signature": "", "url": "https://github.com/spontonalessandro/barai-desktop/releases/download/v1.1.0/BarAI.Desktop.app.tar.gz" }
+    "darwin-aarch64": { "signature": "", "url": "https://github.com/spontonalessandro/barai-desktop/releases/download/v1.1.1/BarAI.Desktop_1.1.1_universal.app.tar.gz" },
+    "darwin-x86_64":  { "signature": "", "url": "https://github.com/spontonalessandro/barai-desktop/releases/download/v1.1.1/BarAI.Desktop_1.1.1_universal.app.tar.gz" }
   }
 }
