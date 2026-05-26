@@ -181,6 +181,7 @@ pub fn run() {
     .plugin(tauri_plugin_http::init())
     .plugin(tauri_plugin_updater::Builder::new().build())
     .plugin(tauri_plugin_opener::init())
+    .plugin(tauri_plugin_process::init())
     .invoke_handler(tauri::generate_handler![
       create_local_db_backup,
       list_local_db_backups,

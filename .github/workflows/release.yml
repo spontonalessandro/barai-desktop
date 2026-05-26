@@ -33,62 +33,54 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build universal app
-        run: npm run tauri:build -- --target universal-apple-darwin
-
-      - name: Prepare release files
-        run: |
-          VERSION=${GITHUB_REF_NAME#v}
-          BUNDLE_DIR="src-tauri/target/universal-apple-darwin/release/bundle"
-
-          # Rinomina DMG
-          OLD_DMG=$(find "${BUNDLE_DIR}/dmg" -name "*.dmg" | head -1)
-          NEW_DMG="${BUNDLE_DIR}/dmg/BarAI.Desktop_${VERSION}_universal.dmg"
-          mv "${OLD_DMG}" "${NEW_DMG}"
-
-          # Crea tar.gz per l'updater
-          NEW_TAR="${BUNDLE_DIR}/macos/BarAI.Desktop.app.tar.gz"
-          cd "${BUNDLE_DIR}/macos"
-          tar -czf "BarAI.Desktop.app.tar.gz" "BarAI Desktop.app"
-          cd -
-          ls -lh "${NEW_TAR}"
-
-          # latest.json senza firma (pubkey vuota in tauri.conf.json)
-          ASSET_URL="https://github.com/${{ github.repository }}/releases/download/${GITHUB_REF_NAME}/BarAI.Desktop.app.tar.gz"
-          cat > latest.json << EOF
-          {
-            "version": "${VERSION}",
-            "notes": "Aggiornamento BarAI Desktop v${VERSION}",
-            "pub_date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-            "platforms": {
-              "darwin-aarch64": { "signature": "", "url": "${ASSET_URL}" },
-              "darwin-x86_64":  { "signature": "", "url": "${ASSET_URL}" }
-            }
-          }
-          EOF
-          cat latest.json
-
-          echo "DMG_PATH=${NEW_DMG}" >> $GITHUB_ENV
-          echo "APP_TAR_PATH=${NEW_TAR}" >> $GITHUB_ENV
+      - name: Build, sign and release
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: 'BarAI Desktop ${{ github.ref_name }}'
+          releaseBody: 'Aggiornamento automatico BarAI Desktop ${{ github.ref_name }}'
+          releaseDraft: false
+          prerelease: false
+          args: --target universal-apple-darwin
 
       - name: Aggiorna latest.json nel repository
         run: |
+          VERSION=${GITHUB_REF_NAME#v}
+          ASSET_URL="https://github.com/${{ github.repository }}/releases/download/${GITHUB_REF_NAME}/BarAI.Desktop_${VERSION}_universal.app.tar.gz"
+
+          # Trova il file di firma generato da tauri-action
+          SIG_FILE=$(find src-tauri/target -name "*.app.tar.gz.sig" | head -1)
+          SIG=""
+          if [ -n "$SIG_FILE" ] && [ -f "$SIG_FILE" ]; then
+            SIG=$(cat "$SIG_FILE")
+            echo "Firma trovata (${#SIG} caratteri)"
+          else
+            echo "ATTENZIONE: firma non trovata"
+          fi
+
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          cp latest.json /tmp/latest.json.new
+
+          cat > /tmp/latest.json << EOF
+          {
+            "version": "${VERSION}",
+            "notes": "Aggiornamento BarAI Desktop ${GITHUB_REF_NAME}",
+            "pub_date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "platforms": {
+              "darwin-aarch64": { "signature": "${SIG}", "url": "${ASSET_URL}" },
+              "darwin-x86_64":  { "signature": "${SIG}", "url": "${ASSET_URL}" }
+            }
+          }
+          EOF
+
           git fetch origin main
           git checkout -f main
           git reset --hard origin/main
-          cp /tmp/latest.json.new latest.json
+          cp /tmp/latest.json latest.json
           git add latest.json
           git diff --cached --quiet || git commit -m "chore: aggiorna latest.json a ${{ github.ref_name }}"
           git push origin main
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: |
-            ${{ env.DMG_PATH }}
-            ${{ env.APP_TAR_PATH }}
-            latest.json
-          generate_release_notes: true

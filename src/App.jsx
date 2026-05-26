@@ -215,23 +215,24 @@ export default function App() {
 
   const effectiveMode = adminSessionActive ? 'admin' : (deviceMode || 'admin');
 
-  // Check aggiornamenti: confronta versione con latest.json su GitHub
+  // Check aggiornamenti: usa Tauri updater per download e installazione automatica
   useEffect(() => {
     if (!ready || dbMode !== 'tauri-sqlite') return;
-    const LATEST_URL = 'https://raw.githubusercontent.com/spontonalessandro/barai-desktop/main/latest.json';
     (async () => {
       try {
-        const { getVersion } = await import('@tauri-apps/api/app');
-        const APP_VERSION = await getVersion();
-        const { fetch: tauriFetch } = await import('@tauri-apps/plugin-http');
-        const res = await tauriFetch(LATEST_URL, { method: 'GET' });
-        const data = await res.json();
-        const latest = data?.version || '';
-        if (latest && latest !== APP_VERSION && latest > APP_VERSION) {
-          setUpdateInfo({ version: latest, currentVersion: APP_VERSION });
+        const { check } = await import('@tauri-apps/plugin-updater');
+        const update = await check();
+        if (update?.available) {
+          const { getVersion } = await import('@tauri-apps/api/app');
+          const APP_VERSION = await getVersion();
+          setUpdateInfo({
+            version: update.version,
+            currentVersion: APP_VERSION,
+            updateHandle: update
+          });
         }
-      } catch (_) {
-        // Non critico — silenzioso
+      } catch (err) {
+        flash(`Check aggiornamento: ${err?.message || String(err)}`, 'error');
       }
     })();
   }, [ready, dbMode]);
@@ -674,21 +675,41 @@ export default function App() {
                 <p className="eyebrow">Aggiornamento disponibile</p>
                 <h2>BarAI v{updateInfo.version}</h2>
               </div>
-              <button className="icon-btn" onClick={() => setUpdateInfo(null)}>×</button>
+              <button className="icon-btn" onClick={() => setUpdateInfo(null)} disabled={updateInfo.installing}>×</button>
             </div>
             <p>È disponibile una nuova versione. Versione attuale: v{updateInfo.currentVersion}.</p>
-            <p style={{ marginTop: 8, fontSize: 13, color: 'var(--muted)' }}>Scarica il nuovo DMG da GitHub e installa sopra la versione attuale.</p>
+            {updateInfo.installing ? (
+              <p style={{ marginTop: 12, fontSize: 14, color: 'var(--accent)', fontWeight: 850 }}>
+                ⏳ {updateInfo.progress || 'Download in corso...'}
+              </p>
+            ) : (
+              <p style={{ marginTop: 8, fontSize: 13, color: 'var(--muted)' }}>L'app si scaricherà e installerà automaticamente. Verrà riavviata al termine.</p>
+            )}
             <div className="form-actions" style={{ marginTop: 18 }}>
-              <button className="ghost-btn" onClick={() => setUpdateInfo(null)}>Più tardi</button>
-              <button className="primary-btn" onClick={async () => {
+              <button className="ghost-btn" onClick={() => setUpdateInfo(null)} disabled={updateInfo.installing}>Più tardi</button>
+              <button className="primary-btn" disabled={updateInfo.installing} onClick={async () => {
                 try {
-                  const { openUrl } = await import('@tauri-apps/plugin-opener');
-                  await openUrl('https://github.com/spontonalessandro/barai-desktop/releases/latest');
+                  setUpdateInfo((prev) => ({ ...prev, installing: true, progress: 'Download in corso...' }));
+                  let downloaded = 0;
+                  let contentLength = 0;
+                  await updateInfo.updateHandle.downloadAndInstall((event) => {
+                    if (event.event === 'Started') {
+                      contentLength = event.data?.contentLength || 0;
+                    } else if (event.event === 'Progress') {
+                      downloaded += event.data?.chunkLength || 0;
+                      const pct = contentLength > 0 ? Math.round((downloaded / contentLength) * 100) : 0;
+                      setUpdateInfo((prev) => ({ ...prev, progress: `Download: ${pct}%` }));
+                    } else if (event.event === 'Finished') {
+                      setUpdateInfo((prev) => ({ ...prev, progress: 'Installazione e riavvio...' }));
+                    }
+                  });
+                  const { relaunch } = await import('@tauri-apps/plugin-process');
+                  await relaunch();
                 } catch (err) {
-                  flash(`Errore apertura browser: ${err?.message || err}. URL: github.com/spontonalessandro/barai-desktop/releases/latest`, 'error');
+                  flash(`Errore installazione: ${err?.message || err}`, 'error');
+                  setUpdateInfo(null);
                 }
-                setUpdateInfo(null);
-              }}>Apri pagina download</button>
+              }}>{updateInfo.installing ? 'Installando...' : 'Installa ora'}</button>
             </div>
           </div>
         </div>
