@@ -50,10 +50,15 @@ jobs:
       - name: Aggiorna latest.json nel repository
         run: |
           VERSION=${GITHUB_REF_NAME#v}
-          ASSET_URL="https://github.com/${{ github.repository }}/releases/download/${GITHUB_REF_NAME}/BarAI.Desktop_${VERSION}_universal.app.tar.gz"
+          ASSET_URL="https://github.com/${{ github.repository }}/releases/download/${GITHUB_REF_NAME}/BarAI.Desktop_universal.app.tar.gz"
 
-          # Trova il file di firma generato da tauri-action
-          SIG_FILE=$(find src-tauri/target -name "*.app.tar.gz.sig" | head -1)
+          # Debug: lista tutti i file .sig generati
+          echo "=== File .sig trovati ==="
+          find src-tauri/target -name "*.sig" 2>/dev/null
+          echo "========================"
+
+          # Trova il file di firma (può avere spazi nel nome)
+          SIG_FILE=$(find src-tauri/target -name "*.app.tar.gz.sig" -print0 | xargs -0 -I {} echo {} | head -1)
           SIG=""
           if [ -n "$SIG_FILE" ] && [ -f "$SIG_FILE" ]; then
             SIG=$(cat "$SIG_FILE")
