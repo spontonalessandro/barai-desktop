@@ -218,25 +218,20 @@ export default function App() {
   // Check aggiornamenti: confronta versione con latest.json su GitHub
   useEffect(() => {
     if (!ready || dbMode !== 'tauri-sqlite') return;
-    flash('Check aggiornamenti...', 'info');
     const LATEST_URL = 'https://raw.githubusercontent.com/spontonalessandro/barai-desktop/main/latest.json';
     (async () => {
       try {
         const { getVersion } = await import('@tauri-apps/api/app');
         const APP_VERSION = await getVersion();
-        flash(`Versione: ${APP_VERSION} — controllo cloud...`, 'info');
         const { fetch: tauriFetch } = await import('@tauri-apps/plugin-http');
         const res = await tauriFetch(LATEST_URL, { method: 'GET' });
-        const text = await res.text();
-        flash(`Status: ${res.status} — risposta lunga ${text.length}`, 'info');
-        const data = JSON.parse(text);
+        const data = await res.json();
         const latest = data?.version || '';
-        flash(`Locale ${APP_VERSION} vs remota ${latest}`, 'info');
         if (latest && latest !== APP_VERSION && latest > APP_VERSION) {
           setUpdateInfo({ version: latest, currentVersion: APP_VERSION });
         }
-      } catch (err) {
-        flash(`Check aggiornamento fallito: ${err?.message || String(err)}`, 'error');
+      } catch (_) {
+        // Non critico — silenzioso
       }
     })();
   }, [ready, dbMode]);
@@ -685,10 +680,15 @@ export default function App() {
             <p style={{ marginTop: 8, fontSize: 13, color: 'var(--muted)' }}>Scarica il nuovo DMG da GitHub e installa sopra la versione attuale.</p>
             <div className="form-actions" style={{ marginTop: 18 }}>
               <button className="ghost-btn" onClick={() => setUpdateInfo(null)}>Più tardi</button>
-              <button className="primary-btn" onClick={() => {
-                flash('Vai a github.com/spontonalessandro/barai-desktop/releases/latest e scarica il DMG', 'info');
+              <button className="primary-btn" onClick={async () => {
+                try {
+                  const { openUrl } = await import('@tauri-apps/plugin-opener');
+                  await openUrl('https://github.com/spontonalessandro/barai-desktop/releases/latest');
+                } catch (err) {
+                  flash(`Errore apertura browser: ${err?.message || err}. URL: github.com/spontonalessandro/barai-desktop/releases/latest`, 'error');
+                }
                 setUpdateInfo(null);
-              }}>Mostra link download</button>
+              }}>Apri pagina download</button>
             </div>
           </div>
         </div>
