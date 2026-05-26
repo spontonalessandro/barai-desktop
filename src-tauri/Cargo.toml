@@ -1,6 +1,6 @@
 [package]
 name = "barai-desktop"
-version = "1.1.2"
+version = "1.1.3"
 description = "BarAI Desktop - gestionale locale per bar con SQLite"
 authors = ["BarAI"]
 edition = "2021"

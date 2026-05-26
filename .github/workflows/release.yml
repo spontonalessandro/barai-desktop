@@ -47,25 +47,27 @@ jobs:
           prerelease: false
           args: --target universal-apple-darwin
 
+      - name: Leggi firma e salvala in /tmp PRIMA del checkout
+        run: |
+          echo "=== File .sig nel build ==="
+          find src-tauri/target -name "*.sig" 2>/dev/null
+          echo "==========================="
+
+          # Trova il file di firma e copialo in /tmp PRIMA che git checkout lo cancelli
+          SIG_FILE=$(find src-tauri/target -name "*.app.tar.gz.sig" | head -1)
+          if [ -n "$SIG_FILE" ] && [ -f "$SIG_FILE" ]; then
+            cp "$SIG_FILE" /tmp/barai_update.sig
+            echo "Firma salvata in /tmp/barai_update.sig ($(wc -c < /tmp/barai_update.sig) bytes)"
+          else
+            echo "ATTENZIONE: firma non trovata, scrivo placeholder vuoto"
+            echo -n "" > /tmp/barai_update.sig
+          fi
+
       - name: Aggiorna latest.json nel repository
         run: |
           VERSION=${GITHUB_REF_NAME#v}
           ASSET_URL="https://github.com/${{ github.repository }}/releases/download/${GITHUB_REF_NAME}/BarAI.Desktop_universal.app.tar.gz"
-
-          # Debug: lista tutti i file .sig generati
-          echo "=== File .sig trovati ==="
-          find src-tauri/target -name "*.sig" 2>/dev/null
-          echo "========================"
-
-          # Trova il file di firma (può avere spazi nel nome)
-          SIG_FILE=$(find src-tauri/target -name "*.app.tar.gz.sig" -print0 | xargs -0 -I {} echo {} | head -1)
-          SIG=""
-          if [ -n "$SIG_FILE" ] && [ -f "$SIG_FILE" ]; then
-            SIG=$(cat "$SIG_FILE")
-            echo "Firma trovata (${#SIG} caratteri)"
-          else
-            echo "ATTENZIONE: firma non trovata"
-          fi
+          SIG=$(cat /tmp/barai_update.sig)
 
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -89,3 +91,9 @@ jobs:
           git add latest.json
           git diff --cached --quiet || git commit -m "chore: aggiorna latest.json a ${{ github.ref_name }}"
           git push origin main
+
+      - name: Carica latest.json corretto nella release
+        run: |
+          gh release upload ${{ github.ref_name }} /tmp/latest.json --repo ${{ github.repository }} --clobber
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
